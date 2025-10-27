@@ -1,0 +1,2 @@
+VCPKG_DEFAULT_TRIPLET=x64-mingw-dynamic;VCPKG_DEFAULT_HOST_TRIPLET=x64-mingw-dynamic
+-DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic
