@@ -5,6 +5,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
 
+#include <pylon/CameraEventHandler.h>
+
 static void generateVideo(const cv::Mat& image, cv::Size size)
 {
     double fps = 60.0;
@@ -13,7 +15,7 @@ static void generateVideo(const cv::Mat& image, cv::Size size)
     cv::Mat imageBgr;
     cv::cvtColor(image, imageBgr, cv::COLOR_GRAY2BGR);
 
-    cv::Mat blankImage = cv::Mat::zeros(size, CV_8UC4);
+    cv::Mat blankImage = cv::Mat::zeros(size, CV_8UC3);
     cv::VideoWriter writer("board.avi", cv::CAP_OPENCV_MJPEG, codec, fps, size, true);
 
     if (!writer.isOpened())
@@ -55,5 +57,5 @@ static void createBoard()
 
 int main()
 {
-    createBoard();
+    // createBoard();
 }

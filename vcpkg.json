@@ -9,6 +9,10 @@
       "features": [
         "contrib"
       ]
+    },
+    {
+      "name": "boost",
+      "version>=": "1.89.0"
     }
   ]
 }
