@@ -1,16 +1,23 @@
 {
-  "name" : "stereo-camera-calibration",
-  "version-string" : "1.0.0",
-  "builtin-baseline" : "271a5b8850aa50f9a40269cbf3cf414b36e333d6",
-  "dependencies" : [ {
-    "name" : "opencv",
-    "version>=" : "4.11.0",
-    "features" : [ "contrib" ]
-  }, {
-    "name" : "boost",
-    "version>=" : "1.89.0"
-  }, {
-    "name" : "cli11",
-    "version>=" : "2.6.1"
-  } ]
+  "name": "stereo-camera-calibration",
+  "version-string": "1.0.0",
+  "builtin-baseline": "271a5b8850aa50f9a40269cbf3cf414b36e333d6",
+  "dependencies": [
+    {
+      "name": "opencv",
+      "version>=": "4.8.0",
+      "features": [
+        "contrib",
+        "ffmpeg"
+      ]
+    },
+    {
+      "name": "boost",
+      "version>=": "1.89.0"
+    },
+    {
+      "name": "cli11",
+      "version>=": "2.6.1"
+    }
+  ]
 }

@@ -9,18 +9,19 @@
 
 static void createVideo(const cv::Mat& image, cv::Size size, std::string path)
 {
+    std::string filename = path + ".mp4";
     double fps{60.0};
-    int codec{cv::VideoWriter::fourcc('M', 'J', 'P', 'G')};
+    int codec{cv::VideoWriter::fourcc('a', 'v', 'c', '1')};
 
     cv::Mat imageBgr;
     cv::cvtColor(image, imageBgr, cv::COLOR_GRAY2BGR);
 
     cv::Mat blankImage{cv::Mat::zeros(size, CV_8UC3)};
-    cv::VideoWriter writer(path + ".avi", cv::CAP_OPENCV_MJPEG, codec, fps, size, true);
+    cv::VideoWriter writer(filename, codec, fps, size, true);
 
     if (!writer.isOpened())
     {
-        std::cout << "Could not open the output video for write: " << std::endl;
+        std::cout << "Could not open the output video for write: " << filename << std::endl;
         return;
     }
 
@@ -53,7 +54,7 @@ static void createBoard(int squaresX, int squaresY, int squareLength, int marker
 int main(int argc, char** argv)
 {
     // Disable OpenCV info messages.
-    cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
+    // cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
     CLI::App app{"Generate a ChArUco board image and/or an event video for an event camera."};
     app.get_formatter()->right_column_width(67);
 
@@ -89,7 +90,7 @@ int main(int argc, char** argv)
 
     std::string path{};
     app.add_option("-p, --path", path, "The path to save the image and/or video to,\n  default is current dir");
-    path += "board.png";
+    path += "board";
 
     bool generateImage{false};
     app.add_flag("-i, --image", generateImage,
@@ -99,8 +100,6 @@ int main(int argc, char** argv)
     bool generateVideo{false};
     app.add_flag("-v, --video", generateVideo,
                  "Whether to generate an event video of the generated board,\n default false");
-
-
 
     CLI11_PARSE(app, argc, argv);
 
