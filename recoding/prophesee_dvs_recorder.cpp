@@ -11,6 +11,7 @@
 #include <metavision/hal/facilities/i_ll_biases.h>
 #include <metavision/sdk/core/utils/cd_frame_generator.h>
 #include <opencv2/highgui.hpp>
+#include <opencv2/core/types.hpp>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -20,13 +21,17 @@
 
 
 int main() {
+    // TODO: separate source file for ChArUco stuff.
 
+    // TODO: add CLI options.
     // ChArUco detector params
     int squaresX = 7;
     int squaresY = 5;
     float squareLength = 0.0295;
     float markerLength = 0.0206;
-    bool refine = true;
+    bool refine = false;
+    const std::uint32_t acc = 10000;
+    int fps = 30;
 
     cv::aruco::DetectorParameters detParams;
     cv::aruco::CharucoParameters charucoParams;
@@ -44,10 +49,16 @@ int main() {
     try {
         // open the first available cameraa
         cam = Metavision::Camera::from_first_available();
-    } catch (const Metavision::CameraException &e) {
+    } catch (Metavision::CameraException &e) {
         std::cerr << e.what() << "\n";
         return 2;
     }
+
+    // TODO: add serial handling.
+
+    // TODO: add biases file loading.
+
+    // TODO: add runtime error handling
 
     // Configure biases for less noise
     auto &device = cam.get_device();
@@ -59,80 +70,67 @@ int main() {
     auto i_trigger_in = cam.get_device().get_facility<Metavision::I_TriggerIn>();
     i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
 
-    // cam.ext_trigger().add_callback([&](const Metavision::EventExtTrigger *begin,
-    //                                    const Metavision::EventExtTrigger *end) {
-    //     for (auto ev = begin; ev != end; ++ev)
-    //         std::cout << "Trigger event at t=" << ev->t << " polarity=" << (int) ev->p << std::endl;
-    // });
+    // TODO: change this to only save cam geometry as a reference.
+    const auto &geometry = cam.geometry();
 
-    const int w = cam.geometry().get_width();
-    const int h = cam.geometry().get_height();
-
-    const std::uint32_t acc = 10000;
-    double fps = 30;
 
     std::mutex cd_frame_generator_mutex;
-    auto frame_gen = Metavision::PeriodicFrameGenerationAlgorithm(w, h, acc, fps);
-    // Metavision::CDFrameGenerator cdFrameGenerator(w, h);
-    // cdFrameGenerator.set_display_accumulation_time_us(acc);
+    Metavision::CDFrameGenerator cdFrameGenerator{geometry.get_width(), geometry.get_height()};
+    cdFrameGenerator.set_display_accumulation_time_us(acc);
 
-    // std::mutex cd_frame_mutex;
-    // cv::Mat cd_frame;
-    // Metavision::timestamp cd_frame_ts{0};
-    // cdFrameGenerator.start(
-    //     30, [&cd_frame_mutex, &cd_frame, &cd_frame_ts](const Metavision::timestamp &ts, const cv::Mat &frame) {
-    //         std::unique_lock<std::mutex> lock(cd_frame_mutex);
-    //         cd_frame_ts = ts;
-    //         frame.copyTo(cd_frame);
-    //     });
+    std::mutex cd_frame_mutex;
+    cv::Mat cd_frame;
+    Metavision::timestamp cd_frame_ts{0};
 
-    // std::string cd_window_name("CD Events");
-    // cv::namedWindow(cd_window_name, CV_GUI_NORMAL);
-    // cv::resizeWindow(cd_window_name, w, h);
-    // cv::moveWindow(cd_window_name, 0, 0);
+    cdFrameGenerator.start(
+        fps, [&cd_frame_mutex, &cd_frame, &cd_frame_ts](const Metavision::timestamp &ts, const cv::Mat &frame) {
+            std::unique_lock<std::mutex> lock(cd_frame_mutex);
+            cd_frame_ts = ts;
+            frame.copyTo(cd_frame);
+        });
 
-    // Metavision::Window window("Frames", w, h, Metavision::BaseWindow::RenderMode::BGR);
+    Metavision::MTWindow window("MTWindow BGR", geometry.get_width(), geometry.get_height(),
+                                 Metavision::Window::RenderMode::BGR);
 
-    Metavision::MTWindow window2("MTWindow BGR", w, h, Metavision::Window::RenderMode::BGR);
+    window.set_keyboard_callback(
+        [&window](Metavision::UIKeyEvent key, int scancode, Metavision::UIAction action, int mods) {
+            if (action == Metavision::UIAction::RELEASE && key == Metavision::UIKeyEvent::KEY_ESCAPE) {
+                window.set_close_flag();
+            }
+        });
 
-    window2.set_keyboard_callback(
-        [&window2](Metavision::UIKeyEvent key, int scancode, Metavision::UIAction action, int mods) {
-        if (action == Metavision::UIAction::RELEASE && key == Metavision::UIKeyEvent::KEY_ESCAPE) {
-                window2.set_close_flag();
-        }
-    });
-
-    frame_gen.set_output_callback([&](Metavision::timestamp, cv::Mat &frame) {
-        cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-
-        std::vector<std::vector<cv::Point2f>> markerCorners;
-        std::vector<int> markerIds;
-        std::vector<cv::Point2f> charucoCorners;
-        std::vector<int> charucoIds;
-
-        charuco.detectBoard(gray, charucoCorners, charucoIds, markerCorners, markerIds);
-
-        cv::Mat viz = frame.clone();
-        if (!markerIds.empty())
-            cv::aruco::drawDetectedMarkers(viz, markerCorners, markerIds);
-        if (!charucoIds.empty())
-            cv::aruco::drawDetectedCornersCharuco(viz, charucoCorners, charucoIds, cv::Scalar(0, 255, 0));
-
-        window2.show_async(viz);
-
-        // window.show(frame);
-    });
-
-    cam.cd().add_callback([&](const Metavision::EventCD *begin, const Metavision::EventCD *end){
-        frame_gen.process_events(begin, end);
-    });
+    cam.cd().add_callback(
+        [&cd_frame_generator_mutex, &cdFrameGenerator
+        ](const Metavision::EventCD *begin, const Metavision::EventCD *end) {
+            // frame_gen.process_events(begin, end);
+            std::unique_lock<std::mutex> lock(cd_frame_generator_mutex);
+            cdFrameGenerator.add_events(begin, end);
+        });
 
 
     cam.start();
     cam.start_recording("test.raw");
-    while (cam.is_running() && !window2.should_close()) {
+    while (cam.is_running() && !window.should_close()) {
         Metavision::EventLoop::poll_and_dispatch();
 
+        if (!cd_frame.empty()) {
+            cv::cvtColor(cd_frame, gray, cv::COLOR_BGR2GRAY);
+
+            std::vector<std::vector<cv::Point2f> > markerCorners;
+            std::vector<int> markerIds;
+            std::vector<int> charucoIds;
+            std::vector<cv::Point2f> charucoCorners;
+
+            charuco.detectBoard(gray, charucoCorners, charucoIds, markerCorners, markerIds);
+
+            cv::Mat viz = cd_frame.clone();
+            if (!markerIds.empty())
+                cv::aruco::drawDetectedMarkers(viz, markerCorners, markerIds);
+            if (!charucoIds.empty())
+                cv::aruco::drawDetectedCornersCharuco(viz, charucoCorners, charucoIds, cv::Scalar(0, 255, 0));
+
+            window.show_async(viz);
+        }
     }
     cam.stop_recording("test.raw");
     cam.stop();
