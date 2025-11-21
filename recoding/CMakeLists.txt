@@ -27,6 +27,11 @@ add_executable(
         utility.cpp utility.h
 )
 
+add_executable(
+        check-valid-images
+        check_valid_images.cpp
+)
+
 target_link_libraries(prophesee-dvs-recorder PRIVATE
         ${OpenCV_LIBS}
         MetavisionSDK::core MetavisionSDK::stream MetavisionSDK::ui
@@ -35,4 +40,9 @@ target_link_libraries(prophesee-dvs-recorder PRIVATE
 target_link_libraries(basler-rgb-recorder PRIVATE
         ${OpenCV_LIBS}
         pylon::pylon
+)
+
+target_link_libraries(check-valid-images PRIVATE
+        ${OpenCV_LIBS}
+        MetavisionSDK::core MetavisionSDK::stream MetavisionSDK::ui
 )

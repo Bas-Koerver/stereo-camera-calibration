@@ -10,7 +10,7 @@
 
 class utility {
 public:
-    static void findShowBoard(const cv::aruco::CharucoDetector& charuco, const cv::Mat& gray, const cv::Mat& frame);
+    static bool findShowBoard(const cv::aruco::CharucoDetector& charuco, const cv::Mat& gray, const cv::Mat& frame);
 };
 
 

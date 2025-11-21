@@ -18,8 +18,13 @@
 
 #include "utility.h"
 
+bool createDirs(const std::string &path) {
+    std::filesystem::path p(path);
+    return std::filesystem::create_directories(p);
+}
 
 int main() {
+    createDirs("./data/eventfile/");
     int exitCode = 0;
 
     // ChArUco detector params
@@ -28,7 +33,7 @@ int main() {
     float squareLength = 0.0295;
     float markerLength = 0.0206;
     bool refine = false;
-    const std::uint32_t acc = 10000;
+    const std::uint32_t acc = 33333;
     int fps = 30;
 
     cv::aruco::DetectorParameters detParams;
@@ -41,7 +46,6 @@ int main() {
     cv::aruco::CharucoBoard board{cv::Size(squaresX, squaresY), squareLength, markerLength, dictionary};
     cv::aruco::CharucoDetector charuco(board, charucoParams, detParams);
 
-    cv::Mat gray;
     Metavision::Camera cam;
 
     bool camOpen = false;
@@ -50,7 +54,7 @@ int main() {
         // open the first available camera
         cam = Metavision::Camera::from_first_available();
         camOpen = true;
-    } catch (Metavision::CameraException& e) {
+    } catch (Metavision::CameraException &e) {
         std::cerr << e.what() << "\n";
         exitCode = 2;
     }
@@ -60,46 +64,49 @@ int main() {
         // TODO: add biases file loading.
 
         // TODO: add runtime error handling
+        cv::Mat cdFrame;
+        cv::Mat grayFrame;
+
+        std::mutex cd_frame_generator_mutex;
+        std::mutex cd_frame_mutex;
+
+        Metavision::timestamp cd_frame_ts{0};
 
         // Configure biases for less noise
         auto &device = cam.get_device();
         auto *biases = device.get_facility<::Metavision::I_LL_Biases>();
-        (void)biases->set("bias_diff_off", 40);
-        (void)biases->set("bias_diff_on", 40);
+        (void) biases->set("bias_diff_off", 40);
+        (void) biases->set("bias_diff_on", 40);
 
         // Enable trigger in port
         auto i_trigger_in = cam.get_device().get_facility<Metavision::I_TriggerIn>();
-        (void)i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
+        (void) i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
 
         // TODO: change this to only save cam geometry as a reference.
         const auto &geometry = cam.geometry();
 
-
-        std::mutex cd_frame_generator_mutex;
         Metavision::CDFrameGenerator cdFrameGenerator{geometry.get_width(), geometry.get_height()};
         cdFrameGenerator.set_display_accumulation_time_us(acc);
 
-        std::mutex cd_frame_mutex;
-        cv::Mat cd_frame;
-        Metavision::timestamp cd_frame_ts{0};
-        (void)cdFrameGenerator.start(
-            fps, [&cd_frame_mutex, &cd_frame, &cd_frame_ts](const Metavision::timestamp &ts, const cv::Mat &frame) {
+        (void) cdFrameGenerator.start(
+            static_cast<uint16_t>(fps),
+            [&cd_frame_mutex, &cdFrame, &cd_frame_ts](const Metavision::timestamp &ts, const cv::Mat &frame) {
                 std::unique_lock<std::mutex> lock(cd_frame_mutex);
                 cd_frame_ts = ts;
-                frame.copyTo(cd_frame);
+                frame.copyTo(cdFrame);
             });
 
         Metavision::MTWindow window("MTWindow BGR", geometry.get_width(), geometry.get_height(),
-                                     Metavision::Window::RenderMode::BGR);
+                                    Metavision::Window::RenderMode::BGR);
 
         window.set_keyboard_callback(
-            [&window](Metavision::UIKeyEvent key, int scancode, Metavision::UIAction action, int mods) {
+            [&window](Metavision::UIKeyEvent key, int, Metavision::UIAction action, int) {
                 if (action == Metavision::UIAction::RELEASE && key == Metavision::UIKeyEvent::KEY_ESCAPE) {
                     window.set_close_flag();
                 }
             });
 
-        (void)cam.cd().add_callback(
+        (void) cam.cd().add_callback(
             [&cd_frame_generator_mutex, &cdFrameGenerator
             ](const Metavision::EventCD *begin, const Metavision::EventCD *end) {
                 // frame_gen.process_events(begin, end);
@@ -107,21 +114,45 @@ int main() {
                 cdFrameGenerator.add_events(begin, end);
             });
 
+        auto now = std::chrono::system_clock::now();
+        auto localTime = std::chrono::system_clock::to_time_t(now);
+        std::stringstream ss;
 
-        (void)cam.start();
-        (void)cam.start_recording("test.raw");
+        ss << std::put_time(std::localtime(&localTime), "%F_%H-%M-%S");
+
+        (void) cam.start();
+        (void) cam.start_recording("./data/eventfile/raw_recording_" + ss.str() + ".raw");
+
         while (cam.is_running() && !window.should_close()) {
             Metavision::EventLoop::poll_and_dispatch();
-
-            if (!cd_frame.empty()) {
-                cv::cvtColor(cd_frame, gray, cv::COLOR_BGR2GRAY);
-                cv::Mat viz{cd_frame.clone()};
-                utility::findShowBoard(charuco, gray, viz);
-                window.show_async(viz);
+            cv::Mat localFrame;
+            {
+                std::unique_lock<std::mutex> lock(cd_frame_mutex);
+                if (cdFrame.empty()) {
+                    continue;
+                }
+                localFrame = cdFrame.clone();
             }
+
+            cv::cvtColor(localFrame, grayFrame, cv::COLOR_BGR2GRAY);
+
+            std::vector<int> markerIds;
+            std::vector<std::vector<cv::Point2f> > markerCorners;
+            std::vector<int> charucoIds;
+            std::vector<cv::Point2f> charucoCorners;
+
+            charuco.detectBoard(grayFrame, charucoCorners, charucoIds, markerCorners, markerIds);
+
+            if (!markerIds.empty())
+                cv::aruco::drawDetectedMarkers(localFrame, markerCorners, markerIds);
+            if (!charucoIds.empty())
+                cv::aruco::drawDetectedCornersCharuco(localFrame, charucoCorners, charucoIds, cv::Scalar(0, 255, 0));
+
+            window.show_async(localFrame);
         }
-        (void)cam.stop_recording("test.raw");
-        (void)cam.stop();
+
+        (void) cam.stop_recording();
+        (void) cam.stop();
     }
     return exitCode;
 }

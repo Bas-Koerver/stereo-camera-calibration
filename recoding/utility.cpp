@@ -10,10 +10,11 @@
 
 
 // MISRA deviation: OpenCV Charuco API requires std::vector
-void utility::findShowBoard(const cv::aruco::CharucoDetector &charuco, const cv::Mat &gray,
+bool utility::findShowBoard(const cv::aruco::CharucoDetector &charuco, const cv::Mat &gray,
                                            const cv::Mat &frame) {
-    std::vector<std::vector<cv::Point2f> > markerCorners;
+    bool boardFound = false;
     std::vector<int> markerIds;
+    std::vector<std::vector<cv::Point2f> > markerCorners;
     std::vector<int> charucoIds;
     std::vector<cv::Point2f> charucoCorners;
 
@@ -24,4 +25,9 @@ void utility::findShowBoard(const cv::aruco::CharucoDetector &charuco, const cv:
         cv::aruco::drawDetectedMarkers(frame, markerCorners, markerIds);
     if (!charucoIds.empty())
         cv::aruco::drawDetectedCornersCharuco(frame, charucoCorners, charucoIds, cv::Scalar(0, 255, 0));
+
+    if (charucoCorners.size() > 3) {
+        boardFound = true;
+    }
+    return boardFound;
 }
