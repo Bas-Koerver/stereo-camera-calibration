@@ -20,6 +20,7 @@
 #include "prophesee_dvs_recorder.h"
 
 #include "../utility.h"
+#include "../VideoViewer.h"
 
 namespace YACC {
     bool createDirs(const std::string &path) {
@@ -57,9 +58,10 @@ namespace YACC {
         configureTimingInterfaces(device);
     }
 
-    PropheseeDVSWorker::PropheseeDVSWorker(std::uint16_t fps, std::uint16_t accumulation_time,
+    PropheseeDVSWorker::PropheseeDVSWorker(camData &cam, std::uint16_t fps, std::uint16_t accumulation_time,
                                            const cv::aruco::CharucoDetector &charuco_detector, const std::string &id)
-        : fps_(fps),
+        : cam_(cam),
+          fps_(fps),
           accumulationTime_(accumulation_time),
           charucoDetector_(charuco_detector), id_(id) {
     }
@@ -89,6 +91,10 @@ namespace YACC {
     }
 
     void PropheseeDVSWorker::start() {
+        cam_.width = 1280;
+        cam_.height = 720;
+
+
         (void) utility::createDirs("./data/eventfile/");
         int exitCode = 0;
 
@@ -147,15 +153,15 @@ namespace YACC {
                     frame.copyTo(cdFrame);
                 });
 
-            Metavision::MTWindow window("MTWindow BGR", geometry.get_width(), geometry.get_height(),
-                                        Metavision::Window::RenderMode::BGR);
-
-            window.set_keyboard_callback(
-                [&window](Metavision::UIKeyEvent key, int, Metavision::UIAction action, int) {
-                    if (action == Metavision::UIAction::RELEASE && key == Metavision::UIKeyEvent::KEY_ESCAPE) {
-                        window.set_close_flag();
-                    }
-                });
+            // Metavision::MTWindow window("MTWindow BGR", geometry.get_width(), geometry.get_height(),
+            //                             Metavision::Window::RenderMode::BGR);
+            //
+            // window.set_keyboard_callback(
+            //     [&window](Metavision::UIKeyEvent key, int, Metavision::UIAction action, int) {
+            //         if (action == Metavision::UIAction::RELEASE && key == Metavision::UIKeyEvent::KEY_ESCAPE) {
+            //             window.set_close_flag();
+            //         }
+            //     });
 
             (void) cam.cd().add_callback(
                 [&cdFrameGenerator, &pol_filter](const Metavision::EventCD *begin, const Metavision::EventCD *end) {
@@ -174,9 +180,9 @@ namespace YACC {
 
             (void) cam.start();
             (void) cam.start_recording("./data/eventfile/raw_recording_" + ss.str() + ".raw");
-
-            while (cam.is_running() && !window.should_close()) {
-                Metavision::EventLoop::poll_and_dispatch();
+            // && !window.should_close()
+            while (cam.is_running() ) {
+                // Metavision::EventLoop::poll_and_dispatch();
                 cv::Mat localFrame;
                 {
                     std::unique_lock<std::mutex> lock(cd_frame_mutex);
@@ -201,7 +207,11 @@ namespace YACC {
                     cv::aruco::drawDetectedCornersCharuco(localFrame, charucoCorners, charucoIds,
                                                           cv::Scalar(0, 255, 0));
 
-                window.show_async(localFrame);
+                // window.show_async(localFrame);
+                {
+                    std::unique_lock<std::mutex> lock{cam_.m};
+                    localFrame.copyTo(cam_.frame);
+                }
             }
 
             (void) cam.stop_recording();

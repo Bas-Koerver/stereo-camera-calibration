@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <opencv2/core/types.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect/aruco_detector.hpp>
@@ -8,6 +9,7 @@
 
 #include "basler_rgb_recorder.h"
 #include "../utility.h"
+#include "../VideoViewer.h"
 
 #ifdef PYLON_WIN_BUILD
 #    include <pylon/PylonGUI.h>
@@ -90,18 +92,22 @@ namespace YACC {
 
     void setNodeMapParameters(GenApi::INodeMap &nodeMap, const int &fps) {
         setPixelFormat(nodeMap, fps);
-        setGainControl(nodeMap);
+        // setGainControl(nodeMap);
         setTimingInterfaces(nodeMap);
         setCounters(nodeMap);
     }
 
-    BaslerRGBWorker::BaslerRGBWorker(int fps,
+    BaslerRGBWorker::BaslerRGBWorker(camData &cam,
+                                     int fps,
                                      const cv::aruco::CharucoBoard &charucoBoard,
-                                     const cv::aruco::CharucoDetector &charuco_detector) : fps_(fps),
+                                     const cv::aruco::CharucoDetector &charuco_detector) : cam_(cam), fps_(fps),
         charucoBoard_(charucoBoard), charucoDetector_(charuco_detector) {
     }
 
     void BaslerRGBWorker::start() {
+        cam_.width = 1920;
+        cam_.height = 1200;
+
         int exitCode = 0;
         (void) utility::createDirs("./data/images/basler_rgb/");
 
@@ -173,7 +179,7 @@ namespace YACC {
                     localFrameID = frameID;
                 }
 
-                img = viz.clone();
+                // img = viz.clone();
 
                 cv::cvtColor(viz, grayFrame, cv::COLOR_BGR2GRAY);
 
@@ -193,37 +199,40 @@ namespace YACC {
                     cv::aruco::drawDetectedCornersCharuco(viz, charucoCorners, charucoIds,
                                                           cv::Scalar(0., 255., 255.));
 
-                std::chrono::duration<double> seconds{std::chrono::system_clock::now() - startTime};
-                if (charucoCorners.size() > 3 && seconds.count() > 2.0) {
-                    charucoBoard_.matchImagePoints(charucoCorners, charucoIds, objectPoints, imagePoints);
-
-                    if (!objectPoints.empty() && !imagePoints.empty()) {
-                        std::vector<cv::Point2f> hullFloat;
-                        cv::convexHull(imagePoints, hullFloat);
-
-                        std::vector<cv::Point> hull;
-                        hull.reserve(hullFloat.size());
-                        for (const auto &p: hullFloat) {
-                            (void) hull.emplace_back(cvRound(p.x), cvRound(p.y));
-                        }
-                        std::vector<std::vector<cv::Point> > hulls{hull};
-
-                        cv::fillPoly(overlay, hulls, cv::Scalar(0., 255., 255.));
-
-                        // Save image where a board was detected.
-                        (void) cv::imwrite("./data/images/basler_rgb/frame_" + std::to_string(localFrameID) + ".png",
-                                           img);
-                    }
-                    startTime = std::chrono::system_clock::now();
+                // std::chrono::duration<double> seconds{std::chrono::system_clock::now() - startTime};
+                // if (charucoCorners.size() > 3 && seconds.count() > 2.0) {
+                //     charucoBoard_.matchImagePoints(charucoCorners, charucoIds, objectPoints, imagePoints);
+                //
+                //     if (!objectPoints.empty() && !imagePoints.empty()) {
+                //         std::vector<cv::Point2f> hullFloat;
+                //         cv::convexHull(imagePoints, hullFloat);
+                //
+                //         std::vector<cv::Point> hull;
+                //         hull.reserve(hullFloat.size());
+                //         for (const auto &p: hullFloat) {
+                //             (void) hull.emplace_back(cvRound(p.x), cvRound(p.y));
+                //         }
+                //         std::vector<std::vector<cv::Point> > hulls{hull};
+                //
+                //         cv::fillPoly(overlay, hulls, cv::Scalar(0., 255., 255.));
+                //
+                //         // Save image where a board was detected.
+                //         (void) cv::imwrite("./data/images/basler_rgb/frame_" + std::to_string(localFrameID) + ".png",
+                //                            img);
+                //     }
+                //     startTime = std::chrono::system_clock::now();
+                // }
+                //
+                // cv::addWeighted(overlay, alpha, viz, 1.0 - alpha, 0.0, viz);
+                {
+                    std::unique_lock<std::mutex> lock{cam_.m};
+                    cam_.frame = viz.clone();
                 }
-
-                cv::addWeighted(overlay, alpha, viz, 1.0 - alpha, 0.0, viz);
-
-                cv::imshow("basler", viz);
-                int key{cv::waitKey(1)};
-                if (key == 27) {
-                    should_close = true;
-                }
+                // cv::imshow("basler", viz);
+                // int key{cv::waitKey(1)};
+                // if (key == 27) {
+                //     should_close = true;
+                // }
             }
 
             cam.StopGrabbing();

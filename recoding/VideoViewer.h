@@ -1,21 +1,31 @@
-//
-// Created by Bas_K on 2025-11-26.
-//
-
 #ifndef STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
 #define STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
 
+#include <metavision/sdk/core/utils/frame_composer.h>
+
 namespace YACC {
+    struct camData {
+        std::string camId;
+        unsigned width;
+        unsigned height;
+        cv::Mat frame;
+        std::mutex m;
+    };
+
     class VideoViewer {
-        public:
-        VideoViewer(unsigned width, unsigned height, cv::Mat &frame);
+    public:
+        VideoViewer(unsigned viewsHorizontal, std::vector<camData> &camDatas);
 
         void start();
 
-        private:
-        const unsigned int width_;
-        const unsigned int height_;
-        cv::Mat& frame_;
+    private:
+        unsigned viewsHorizontal_ = 2;
+        Metavision::FrameComposer frame_composer_;
+        std::vector<camData> &camDatas_;
+
+        std::tuple<std::vector<int>, std::vector<int>> calculateBiggestDim();
+
+        std::tuple<int, int> calculateRowColumnIndex(int camIndex);
     };
 } // YACC
 
