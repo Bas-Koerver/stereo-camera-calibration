@@ -7,9 +7,9 @@
 
 #include <pylon/PylonIncludes.h>
 
-#include "basler_rgb_recorder.h"
-#include "../utility.h"
-#include "../VideoViewer.h"
+#include "basler_rgb_recorder.hpp"
+#include "../utility.hpp"
+#include "../VideoViewer.hpp"
 
 #ifdef PYLON_WIN_BUILD
 #    include <pylon/PylonGUI.h>
@@ -45,7 +45,6 @@ public:
 
         {
             std::lock_guard<std::mutex> lock{frame_mutex_};
-            // tempFrameBGR.copyTo(frame_);
             tempFrame.copyTo(frame_);
             id_ = tempID;
         }
@@ -59,10 +58,10 @@ private:
 };
 
 namespace YACC {
-    void setPixelFormat(GenApi::INodeMap &nodeMap, const int &fps) {
+    void BaslerRGBWorker::setPixelFormat(GenApi::INodeMap &nodeMap) {
         // Configure pixel format and exposure time (FPS).
         Pylon::CEnumParameter(nodeMap, "PixelFormat").SetValue("BGR8");
-        Pylon::CFloatParameter(nodeMap, "ExposureTime").SetValue((1.0 / static_cast<double>(fps)) * 1e6);
+        Pylon::CFloatParameter(nodeMap, "ExposureTime").SetValue((1.0 / static_cast<double>(fps_)) * 1e6);
     }
 
     void setGainControl(GenApi::INodeMap &nodeMap) {
@@ -90,32 +89,59 @@ namespace YACC {
         Pylon::CCommandParameter(nodeMap, "CounterReset").Execute();
     }
 
-    void setNodeMapParameters(GenApi::INodeMap &nodeMap, const int &fps) {
-        setPixelFormat(nodeMap, fps);
-        // setGainControl(nodeMap);
-        setTimingInterfaces(nodeMap);
-        setCounters(nodeMap);
+    std::tuple<int, int> getDims(GenApi::INodeMap &nodeMap) {
+        return {
+            Pylon::CIntegerParameter(nodeMap, "Width").GetValue(),
+            Pylon::CIntegerParameter(nodeMap, "Height").GetValue()
+        };
     }
 
-    BaslerRGBWorker::BaslerRGBWorker(camData &cam,
+    std::tuple<int, int> BaslerRGBWorker::getSetNodeMapParameters(GenApi::INodeMap &nodeMap) {
+        setPixelFormat(nodeMap);
+        setGainControl(nodeMap);
+        setTimingInterfaces(nodeMap);
+        setCounters(nodeMap);
+        return getDims(nodeMap);
+    }
+
+    BaslerRGBWorker::BaslerRGBWorker(std::stop_token stopToken,
+                                     CamData &camData,
                                      int fps,
-                                     const cv::aruco::CharucoBoard &charucoBoard,
-                                     const cv::aruco::CharucoDetector &charuco_detector) : cam_(cam), fps_(fps),
-        charucoBoard_(charucoBoard), charucoDetector_(charuco_detector) {
+                                     const cv::aruco::CharucoDetector &charucoDetector,
+                                     const std::string &camId) : stopToken_(stopToken),
+                                                                 camData_(camData),
+                                                                 fps_(fps),
+                                                                 charucoDetector_(charucoDetector) {
+        Pylon::PylonInitialize();
+        camId_ = camId.c_str();
+    }
+
+    void BaslerRGBWorker::listAvailableSources() {
+        Pylon::CTlFactory &TlFactory = Pylon::CTlFactory::GetInstance();
+        Pylon::DeviceInfoList_t lstDevices;
+
+        try {
+            (void) TlFactory.EnumerateDevices(lstDevices);
+            if (lstDevices.empty()) {
+                std::cerr << "No available Basler cameras found \n";
+                Pylon::PylonTerminate();
+            }
+        } catch (const GenICam::GenericException &e) {
+            std::cerr << "Pylon error: " << e.GetDescription() << "\n";
+            Pylon::PylonTerminate();
+        }
+
+        for (auto device: lstDevices) {
+            const auto type = device.GetDeviceFactory();
+            const auto id = device.GetFullName();
+
+            std::cout << "Source type: " << type << "\n";
+            std::cout << "- ID: " << id << "\n";
+        }
     }
 
     void BaslerRGBWorker::start() {
-        cam_.width = 1920;
-        cam_.height = 1200;
-
-        int exitCode = 0;
         (void) utility::createDirs("./data/images/basler_rgb/");
-
-
-        bool camOpen = false;
-
-        Pylon::PylonInitialize();
-
         Pylon::CInstantCamera cam;
 
         try {
@@ -126,30 +152,36 @@ namespace YACC {
             if (lstDevices.empty()) {
                 std::cerr << "No Basler cameras found.\n";
                 Pylon::PylonTerminate();
-                exitCode = 2;
+                camData_.exitCode = 2;
             } else {
-                cam.Attach(TlFactory.CreateDevice(lstDevices[0]));
-                std::cout << "Using device: " << cam.GetDeviceInfo().GetModelName() << "\n";
-                camOpen = true;
+                if (!camId_.empty()) {
+                    cam.Attach(TlFactory.CreateDevice(Pylon::CDeviceInfo().SetFullName(camId_)));
+                    camData_.camName = cam.GetDeviceInfo().GetModelName();
+                    std::cout << "Using Basler device: " << camData_.camName << "\n";
+                    camData_.isOpen = true;
+
+                } else {
+                    cam.Attach(TlFactory.CreateDevice(lstDevices[0]));
+                    camData_.camName = cam.GetDeviceInfo().GetModelName();
+                    std::cout << "Using Basler device: " << camData_.camName << "\n";
+                    camData_.isOpen = true;
+                }
             }
         } catch (const GenICam::GenericException &e) {
             std::cerr << "Pylon error: " << e.GetDescription() << "\n";
             Pylon::PylonTerminate();
-            exitCode = EXIT_FAILURE;
+            camData_.exitCode = EXIT_FAILURE;
         }
 
-        if (camOpen) {
+        if (camData_.isOpen) {
             cam.Open();
             GenApi::INodeMap &nodeMap = cam.GetNodeMap();
-
-            setNodeMapParameters(nodeMap, fps_);
-
-            int height{static_cast<int>(Pylon::CIntegerParameter(nodeMap, "Height").GetValue())};
-            int width{static_cast<int>(Pylon::CIntegerParameter(nodeMap, "Width").GetValue())};
+            auto [width, height] = getSetNodeMapParameters(nodeMap);
+            camData_.width = width;
+            camData_.height = height;
 
             cv::Mat grayFrame;
             cv::Mat overlay{height, width, CV_8UC3, cv::Scalar(0, 0, 0)};
-            double alpha = 0.2;
 
             auto startTime = std::chrono::system_clock::now();
 
@@ -164,82 +196,41 @@ namespace YACC {
             cam.StartGrabbing(Pylon::GrabStrategy_LatestImageOnly, Pylon::GrabLoop_ProvidedByInstantCamera);
 
             Pylon::CGrabResultPtr ptrGrabResult;
-            bool should_close{false};
 
-            while (cam.IsGrabbing() && !should_close) {
-                cv::Mat viz;
-                cv::Mat img;
+            camData_.isRunning = cam.IsGrabbing();
+            while (cam.IsGrabbing() && !stopToken_.stop_requested()) {
+                cv::Mat localFrame;
                 int localFrameID;
                 {
                     std::unique_lock<std::mutex> lock{frameMutex};
                     if (frame.empty()) {
                         continue;
                     }
-                    viz = frame.clone();
+                    localFrame = frame.clone();
                     localFrameID = frameID;
                 }
+                // Frame used for visualisation
+                {
+                    std::unique_lock<std::mutex> lock{camData_.m};
+                    camData_.frame = localFrame.clone();
+                }
 
-                // img = viz.clone();
-
-                cv::cvtColor(viz, grayFrame, cv::COLOR_BGR2GRAY);
-
-                std::vector<int> markerIds;
-                std::vector<std::vector<cv::Point2f> > markerCorners;
-                std::vector<int> charucoIds;
-                std::vector<cv::Point2f> charucoCorners;
-                std::vector<cv::Point3f> objectPoints;
-                std::vector<cv::Point2f> imagePoints;
-
-                charucoDetector_.detectBoard(grayFrame, charucoCorners, charucoIds, markerCorners, markerIds);
-
-
-                if (!markerIds.empty())
-                    cv::aruco::drawDetectedMarkers(viz, markerCorners, markerIds, cv::Scalar(255., 255., 0.));
-                if (!charucoIds.empty())
-                    cv::aruco::drawDetectedCornersCharuco(viz, charucoCorners, charucoIds,
-                                                          cv::Scalar(0., 255., 255.));
-
+                // Frame used for verification
+                // TODO: Maybe run after every x frames instead of seconds.
                 // std::chrono::duration<double> seconds{std::chrono::system_clock::now() - startTime};
                 // if (charucoCorners.size() > 3 && seconds.count() > 2.0) {
-                //     charucoBoard_.matchImagePoints(charucoCorners, charucoIds, objectPoints, imagePoints);
                 //
-                //     if (!objectPoints.empty() && !imagePoints.empty()) {
-                //         std::vector<cv::Point2f> hullFloat;
-                //         cv::convexHull(imagePoints, hullFloat);
-                //
-                //         std::vector<cv::Point> hull;
-                //         hull.reserve(hullFloat.size());
-                //         for (const auto &p: hullFloat) {
-                //             (void) hull.emplace_back(cvRound(p.x), cvRound(p.y));
-                //         }
-                //         std::vector<std::vector<cv::Point> > hulls{hull};
-                //
-                //         cv::fillPoly(overlay, hulls, cv::Scalar(0., 255., 255.));
-                //
-                //         // Save image where a board was detected.
-                //         (void) cv::imwrite("./data/images/basler_rgb/frame_" + std::to_string(localFrameID) + ".png",
-                //                            img);
-                //     }
                 //     startTime = std::chrono::system_clock::now();
-                // }
-                //
-                // cv::addWeighted(overlay, alpha, viz, 1.0 - alpha, 0.0, viz);
-                {
-                    std::unique_lock<std::mutex> lock{cam_.m};
-                    cam_.frame = viz.clone();
-                }
-                // cv::imshow("basler", viz);
-                // int key{cv::waitKey(1)};
-                // if (key == 27) {
-                //     should_close = true;
                 // }
             }
 
             cam.StopGrabbing();
             cam.Close();
-            cv::destroyAllWindows();
             (void) cam.DeregisterImageEventHandler(&frameHandler);
-            Pylon::PylonTerminate();
         }
+    }
+
+    BaslerRGBWorker::~BaslerRGBWorker() {
+        Pylon::PylonTerminate();
     }
 }

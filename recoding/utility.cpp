@@ -3,7 +3,7 @@
 #include <opencv2/objdetect/aruco_detector.hpp>
 #include <opencv2/objdetect/charuco_detector.hpp>
 
-#include "utility.h"
+#include "utility.hpp"
 
 namespace YACC {
     bool utility::createDirs(const std::string &path) {
@@ -12,25 +12,27 @@ namespace YACC {
     }
 
     // MISRA deviation: OpenCV Charuco API requires std::vector
-    bool utility::findShowBoard(const cv::aruco::CharucoDetector &charuco, const cv::Mat &gray,
-                                               const cv::Mat &frame) {
+    std::tuple<
+        bool,
+        std::vector<int>,
+        std::vector<std::vector<cv::Point2f> >,
+        std::vector<int>,
+        std::vector<cv::Point2f>
+    > utility::findBoard(const cv::aruco::CharucoDetector &charucoDector,
+                         cv::Mat &gray,
+                         int cornerMin) {
+
         bool boardFound = false;
         std::vector<int> markerIds;
         std::vector<std::vector<cv::Point2f> > markerCorners;
-        std::vector<int> charucoIds;
+        std::vector<int> chafrucoIds;
         std::vector<cv::Point2f> charucoCorners;
 
-        charuco.detectBoard(gray, charucoCorners, charucoIds, markerCorners, markerIds);
+        charucoDector.detectBoard(gray, charucoCorners, chafrucoIds, markerCorners, markerIds);
 
-
-        if (!markerIds.empty())
-            cv::aruco::drawDetectedMarkers(frame, markerCorners, markerIds);
-        if (!charucoIds.empty())
-            cv::aruco::drawDetectedCornersCharuco(frame, charucoCorners, charucoIds, cv::Scalar(0, 255, 0));
-
-        if (charucoCorners.size() > 3) {
+        if (charucoCorners.size() > cornerMin) {
             boardFound = true;
         }
-        return boardFound;
+        return {boardFound, markerIds, markerCorners, chafrucoIds, charucoCorners};
     }
 }

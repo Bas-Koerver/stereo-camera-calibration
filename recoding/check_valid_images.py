@@ -1,8 +1,7 @@
+import cv2
 import glob
-
 import h5py
 import numpy as np
-import cv2
 
 
 def frame_at_nth_trigger(
@@ -49,8 +48,8 @@ def frame_at_nth_trigger(
     with h5py.File(h5_path, "r") as f:
         # ----- 1. Get n-th positive trigger -----
         trig = f[trig_path]
-        trig_t = trig["t"][:]    # timestamps of trigger events
-        trig_p = trig["p"][:]    # polarity of trigger events (0/1)
+        trig_t = trig["t"][:]  # timestamps of trigger events
+        trig_p = trig["p"][:]  # polarity of trigger events (0/1)
 
         pos_trig_idx = np.flatnonzero(trig_p == 1)
         if n < 0 or n >= len(pos_trig_idx):
@@ -103,7 +102,6 @@ def frame_at_nth_trigger(
 
     cd_slice = {"x": x, "y": y, "t": t, "p": p}
     return frame, t_ref, cd_slice
-
 
 
 if __name__ == "__main__":

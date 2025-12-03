@@ -1,10 +1,9 @@
+import cv2 as cv
 import json
+import numpy as np
 import os
 import pathlib
 from glob import glob
-
-import cv2 as cv
-import numpy as np
 
 
 def splitfn(fn):
@@ -312,8 +311,8 @@ def transfer_bbox_left_to_right(bbox_left, disparity,
     for (cx, cy) in corners_L:
         d = sample_disp_at(cx, cy)
         if d is None:
-            d = d_global      # fallback to global median
-        xR = cx - d          # left camera is reference → x_right = x_left - disp
+            d = d_global  # fallback to global median
+        xR = cx - d  # left camera is reference → x_right = x_left - disp
         corners_R_x.append(xR)
 
     # Build an axis-aligned bbox that covers all four projected corners
@@ -328,7 +327,6 @@ def transfer_bbox_left_to_right(bbox_left, disparity,
     yR_max = y1
 
     return (xR_min, yR_min, xR_max - xR_min, yR_max - yR_min)
-
 
 
 def warp_bbox_raw_to_rect(bbox_raw,
@@ -369,6 +367,7 @@ def warp_bbox_raw_to_rect(bbox_raw,
     y_max = int(np.ceil(y_max))
 
     return (x_min, y_min, x_max - x_min, y_max - y_min)
+
 
 if __name__ == '__main__':
     # Left camera is Prophesee, Right camera is Basler

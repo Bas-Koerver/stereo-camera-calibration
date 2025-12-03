@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.23...3.27)
 project(stereo-camera-calibration
-LANGUAGES CXX
-VERSION 0.1)
+        LANGUAGES CXX
+        VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -15,14 +15,14 @@ find_package(OpenCV REQUIRED)
 find_package(Boost COMPONENTS program_options REQUIRED)
 add_compile_definitions(BOOST_BIND_GLOBAL_PLACEHOLDERS) ## needed to get rid of warning `#pragma message: The practice of declaring the Bind placeholders (_1, _2, ...)`
 
-include_directories( ${OpenCV_INCLUDE_DIRS} )
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(StereoCalibration
         camera_manager.cpp
-        recorders/prophesee_dvs_recorder.cpp recorders/prophesee_dvs_recorder.h
-        recorders/basler_rgb_recorder.cpp recorders/basler_rgb_recorder.h
-        utility.cpp utility.h
-        videoViewer.cpp videoViewer.h
+        recorders/prophesee_dvs_recorder.cpp recorders/prophesee_dvs_recorder.hpp
+        recorders/basler_rgb_recorder.cpp recorders/basler_rgb_recorder.hpp
+        utility.cpp utility.hpp
+        videoViewer.cpp VideoViewer.hpp
 
 )
 
