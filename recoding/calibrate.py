@@ -22,8 +22,8 @@ def load_calibration(calibration_file):
 def stereo_calibrate(mtx1, dist1, mtx2, dist2, data_dir_left, data_dir_right):
     height = 5
     width = 7
-    square_size = 0.0299
-    marker_size = 0.0209
+    square_size = 0.0298
+    marker_size = 0.0208
     aruco_dict_name = cv.aruco.DICT_6X6_50
 
     pattern_size = (width, height)
@@ -68,11 +68,11 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, data_dir_left, data_dir_right):
     # objpoints = []  # 3d point in real world space
 
     for frame_l, frame_r in zip(cl_images, cr_images):
-        gray1 = cv.cvtColor(frame_l, cv.COLOR_BGR2GRAY)
-        gray2 = cv.cvtColor(frame_r, cv.COLOR_BGR2GRAY)
+        grayl = cv.cvtColor(frame_l, cv.COLOR_BGR2GRAY)
+        grayr = cv.cvtColor(frame_r, cv.COLOR_BGR2GRAY)
 
-        charuco_corners_l, charuco_ids_l, _, _ = charuco_detector.detectBoard(gray1)
-        charuco_corners_r, charuco_ids_r, _, _ = charuco_detector.detectBoard(gray2)
+        charuco_corners_l, charuco_ids_l, _, _ = charuco_detector.detectBoard(grayl)
+        charuco_corners_r, charuco_ids_r, _, _ = charuco_detector.detectBoard(grayr)
 
         if len(np.intersect1d(charuco_ids_r, charuco_ids_l)) > 10:
             allCorners['left'].append(charuco_corners_l)
@@ -115,15 +115,16 @@ def calibrate(img_name, debug_dir):
 
     height = 5
     width = 7
-    square_size = 0.0299
-    marker_size = 0.0209
+    square_size = 0.0298
+    marker_size = 0.0208
     aruco_dict_name = cv.aruco.DICT_6X6_50
 
     pattern_size = (width, height)
 
     obj_points = []
     img_points = []
-    h, w = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[:2]
+    # h, w = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[:2]
+    image_size = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[::-1]
 
     aruco_dict = cv.aruco.getPredefinedDictionary(aruco_dict_name)
     board = cv.aruco.CharucoBoard(pattern_size, square_size, marker_size, aruco_dict)
@@ -136,7 +137,7 @@ def calibrate(img_name, debug_dir):
             print("Failed to load", fn)
             return None
 
-        assert w == img.shape[1] and h == img.shape[0], ("size: %d x %d ... " % (img.shape[1], img.shape[0]))
+        assert image_size[0] == img.shape[1] and image_size[1] == img.shape[0], ("size: %d x %d ... " % (img.shape[1], img.shape[0]))
         found = False
         corners = 0
 
@@ -170,7 +171,7 @@ def calibrate(img_name, debug_dir):
         obj_points.append(pattern_points)
 
     # calculate camera distortion
-    rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None)
+    rms, camera_matrix, dist_coefs, _rvecs, _tvecs = cv.calibrateCamera(obj_points, img_points, image_size, None, None)
 
     data = {
         "camera_matrix": camera_matrix.tolist(),
@@ -371,23 +372,19 @@ def warp_bbox_raw_to_rect(bbox_raw,
 
 if __name__ == '__main__':
     # Left camera is Prophesee, Right camera is Basler
-
     data_dir_left = "C:/Users/Bas_K/source/repos/Thesis/data/images/prophesee_dvs/*.png"
-    debug_dir = "C:/Users/Bas_K/source/repos/Thesis/data/output/prophesee_dvs/"
-    # rms_l, camera_matrix_l, dist_coefs_l, _rvecs_l, _tvecs_l = calibrate(data_dir_left, debug_dir)
-
+    debug_dir_left = "C:/Users/Bas_K/source/repos/Thesis/data/output/prophesee_dvs/"
     data_dir_right = "C:/Users/Bas_K/source/repos/Thesis/data/images/basler_rgb/*.png"
-    debug_dir = "C:/Users/Bas_K/source/repos/Thesis/data/output/basler_rgb/"
-    # rms_r, camera_matrix_r, dist_coefs_r, _rvecs_r, _tvecs_r = calibrate(data_dir_right, debug_dir)
-
-    camera_matrix_l, dist_coefs_l = load_calibration(
-        "C:/Users/Bas_K/source/repos/Thesis/data/output/prophesee_dvs/calibration.json")
-    camera_matrix_r, dist_coefs_r = load_calibration(
-        "C:/Users/Bas_K/source/repos/Thesis/data/output/basler_rgb/calibration.json")
-
-    debug_dir = "C:/Users/Bas_K/source/repos/Thesis/data/output/"
+    debug_dir_right = "C:/Users/Bas_K/source/repos/Thesis/data/output/basler_rgb/"
     calib_json_left = "C:/Users/Bas_K/source/repos/Thesis/data/output/prophesee_dvs/calibration.json"
     calib_json_right = "C:/Users/Bas_K/source/repos/Thesis/data/output/basler_rgb/calibration.json"
+    debug_dir = "C:/Users/Bas_K/source/repos/Thesis/data/output/"
+
+    # rms_l, camera_matrix_l, dist_coefs_l, _rvecs_l, _tvecs_l = calibrate(data_dir_left, debug_dir_left)
+    # rms_r, camera_matrix_r, dist_coefs_r, _rvecs_r, _tvecs_r = calibrate(data_dir_right, debug_dir_right)
+
+    camera_matrix_l, dist_coefs_l = load_calibration(calib_json_left)
+    camera_matrix_r, dist_coefs_r = load_calibration(calib_json_right)
 
     rawL = cv.imread("C:/Users/Bas_K/source/repos/Thesis/data/output/prophesee_dvs/frame_2057_board.png")
     rawR = cv.imread("C:/Users/Bas_K/source/repos/Thesis/data/output/basler_rgb/frame_2057_board.png")
@@ -395,8 +392,9 @@ if __name__ == '__main__':
     R, T = stereo_calibrate(camera_matrix_l, dist_coefs_l, camera_matrix_r, dist_coefs_r, data_dir_left, data_dir_right)
 
     R1, R2, P1, P2, Q, roi1, roi2 = cv.stereoRectify(camera_matrix_l, dist_coefs_l, camera_matrix_r, dist_coefs_r,
-                                                     (1920, 1200), R, T, flags=cv.CALIB_ZERO_DISPARITY, alpha=0)
-
+                                                     (1920, 1200), R, T, alpha=0.89)
+    # (1920, 1200)
+    # (1280, 720)
     map1L, map2L = cv.initUndistortRectifyMap(camera_matrix_l, dist_coefs_l, R1, P1, (1920, 1200), cv.CV_16SC2)
     map1R, map2R = cv.initUndistortRectifyMap(camera_matrix_r, dist_coefs_r, R2, P2, (1920, 1200), cv.CV_16SC2)
 
@@ -413,7 +411,6 @@ if __name__ == '__main__':
     )
 
     bbox_right = transfer_bbox_left_to_right(bbox_rect_left, disp)
-    # bbox_right = transfer_bbox_using_Q(bbox_rect_left, disp, Q, P2)
 
     print("rectL shape:", rectL.shape)
     print("rectR shape:", rectR.shape)
