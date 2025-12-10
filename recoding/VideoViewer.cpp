@@ -1,12 +1,15 @@
 #include <metavision/sdk/core/utils/frame_composer.h>
-#include <metavision/sdk/ui/utils/event_loop.h>
 #include <metavision/sdk/ui/utils/window.h>
-#include <numeric>
+#include <metavision/sdk/ui/utils/event_loop.h>
 
-#include "utility.hpp"
 #include "VideoViewer.hpp"
 
-namespace YACC {
+#include <numeric>
+#include <vector>
+
+#include "utility.hpp"
+
+namespace YACCP {
     template<typename T>
     T sumVector(std::vector<T> &dimVector, int stop) {
         auto end = dimVector.begin() + stop;
@@ -159,14 +162,16 @@ namespace YACC {
                             mode = camDetectMode.load(std::memory_order_relaxed);
                             if (mode > 0) {
                                 camDetectMode.store(mode - 1, std::memory_order_relaxed);
-                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].camName << "\n";
+                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].camName <<
+                                        "\n";
                             }
                             break;
                         case Metavision::UIKeyEvent::KEY_D:
                             mode = camDetectMode.load(std::memory_order_relaxed);
                             if (mode < static_cast<int>(camRefs.size()) - 1 && mode >= -1) {
                                 camDetectMode.store(mode + 1, std::memory_order_relaxed);
-                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].camName << "\n";
+                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].camName <<
+                                        "\n";
                             }
                             break;
                     }

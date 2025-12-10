@@ -137,7 +137,8 @@ def calibrate(img_name, debug_dir):
             print("Failed to load", fn)
             return None
 
-        assert image_size[0] == img.shape[1] and image_size[1] == img.shape[0], ("size: %d x %d ... " % (img.shape[1], img.shape[0]))
+        assert image_size[0] == img.shape[1] and image_size[1] == img.shape[0], (
+                "size: %d x %d ... " % (img.shape[1], img.shape[0]))
         found = False
         corners = 0
 

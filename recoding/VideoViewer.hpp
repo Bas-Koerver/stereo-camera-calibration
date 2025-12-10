@@ -1,20 +1,16 @@
 #ifndef STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
 #define STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
+#include <stop_token>
+#include <vector>
+
+#include <opencv2/objdetect/charuco_detector.hpp>
 
 #include <metavision/sdk/core/utils/frame_composer.h>
 
-namespace YACC {
-    struct CamData {
-        bool isOpen{false};
-        bool isRunning{false};
-        int exitCode;
-        std::string camName;
-        int width{};
-        int height{};
-        cv::Mat frame;
-        std::mutex m;
-    };
+#include "recorders/camera_worker.hpp"
 
+
+namespace YACCP {
     class VideoViewer {
     public:
         VideoViewer(std::stop_source &stopSource,
@@ -29,7 +25,7 @@ namespace YACC {
         int viewsHorizontal_ = 2;
         Metavision::FrameComposer frame_composer_;
         std::vector<CamData> &camDatas_;
-        const cv::aruco::CharucoDetector &charucoDetector_;
+        const cv::aruco::CharucoDetector charucoDetector_;
 
         void processFrame(std::stop_token stopToken, CamData &camData, int camRef, std::atomic<int> &camDetectMode);
 
@@ -37,7 +33,7 @@ namespace YACC {
 
         std::tuple<int, int> calculateRowColumnIndex(int camIndex) const;
     };
-} // YACC
+} // YACCP
 
 #endif //STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
 

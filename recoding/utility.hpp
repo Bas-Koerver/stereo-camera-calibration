@@ -3,7 +3,7 @@
 
 #include <opencv2/objdetect/charuco_detector.hpp>
 
-namespace YACC {
+namespace YACCP {
     class utility {
     public:
         static bool createDirs(const std::string &path);

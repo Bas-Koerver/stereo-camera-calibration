@@ -1,31 +1,25 @@
 #ifndef STEREO_CAMERA_CALIBRATION_BASLER_RGB_RECORDER_H
 #define STEREO_CAMERA_CALIBRATION_BASLER_RGB_RECORDER_H
-#include <opencv2/objdetect/charuco_detector.hpp>
-#include "../VideoViewer.hpp"
+#include "camera_worker.hpp"
 #include <pylon/PylonIncludes.h>
 
-namespace YACC {
-    class BaslerRGBWorker {
+
+namespace YACCP {
+    class BaslerRGBWorker : public CameraWorker {
     public:
-        BaslerRGBWorker(std::stop_token stopToken,
+        BaslerRGBWorker(std::stop_source stopSource,
                         CamData &camData,
                         int fps,
-                        const cv::aruco::CharucoDetector &charucoDetector,
-                        const std::string &camId = {});
+                        int id,
+                        std::string camId = {});
 
-        void listAvailableSources();
+        void listAvailableSources() override;
 
-        void start();
+        void start() override;
 
-        ~BaslerRGBWorker();
+        ~BaslerRGBWorker() override;
 
     private:
-        std::stop_token stopToken_;
-        CamData &camData_;
-        const int fps_;
-        const cv::aruco::CharucoDetector charucoDetector_;
-        Pylon::String_t camId_;
-
         void setPixelFormat(GenApi::INodeMap &nodeMap);
 
         std::tuple<int, int> getSetNodeMapParameters(GenApi::INodeMap &nodeMap);

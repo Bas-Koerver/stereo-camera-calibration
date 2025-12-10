@@ -5,7 +5,7 @@
 
 #include "utility.hpp"
 
-namespace YACC {
+namespace YACCP {
     bool utility::createDirs(const std::string &path) {
         std::filesystem::path p(path);
         return std::filesystem::create_directories(p);
@@ -21,7 +21,6 @@ namespace YACC {
     > utility::findBoard(const cv::aruco::CharucoDetector &charucoDector,
                          cv::Mat &gray,
                          int cornerMin) {
-
         bool boardFound = false;
         std::vector<int> markerIds;
         std::vector<std::vector<cv::Point2f> > markerCorners;

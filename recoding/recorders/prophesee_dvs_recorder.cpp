@@ -1,30 +1,22 @@
-#include <metavision/sdk/core/algorithms/periodic_frame_generation_algorithm.h>
 #include <metavision/sdk/core/algorithms/polarity_filter_algorithm.h>
 #include <metavision/sdk/core/utils/cd_frame_generator.h>
-#include <metavision/sdk/ui/utils/window.h>
-#include <metavision/sdk/ui/utils/mt_window.h>
-#include <metavision/sdk/ui/utils/event_loop.h>
 #include <metavision/sdk/stream/camera.h>
-#include <metavision/sdk/base/events/event_cd.h>
 
-#include <metavision/hal/device/device_discovery.h>
-#include <metavision/hal/device/device.h>
+#include <metavision/hal/facilities/i_hw_identification.h>
 #include <metavision/hal/facilities/i_trigger_in.h>
 #include <metavision/hal/facilities/i_ll_biases.h>
-#include <metavision/hal/facilities/i_hw_identification.h>
-
-
-#include <opencv2/core/types.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/objdetect/aruco_detector.hpp>
-#include <opencv2/objdetect/charuco_detector.hpp>
 
 #include "prophesee_dvs_recorder.hpp"
 
-#include "../utility.hpp"
-#include "../VideoViewer.hpp"
+#include <filesystem>
+#include <iostream>
+#include <string>
 
-namespace YACC {
+
+#include "../utility.hpp"
+#include "camera_worker.hpp"
+
+namespace YACCP {
     bool createDirs(const std::string &path) {
         std::filesystem::path p(path);
         return std::filesystem::create_directories(p);
@@ -76,17 +68,14 @@ namespace YACC {
         }
     }
 
-    PropheseeDVSWorker::PropheseeDVSWorker(std::stop_token stopToken,
+    PropheseeDVSWorker::PropheseeDVSWorker(std::stop_source stopSource,
                                            CamData &camData,
-                                           std::uint16_t fps,
-                                           std::uint16_t accumulation_time,
-                                           const cv::aruco::CharucoDetector &charucoDetector,
-                                           const std::string &camId) : stopToken_(stopToken),
-                                                                       camData_(camData),
-                                                                       fps_(fps),
-                                                                       accumulationTime_(accumulation_time),
-                                                                       charucoDetector_(charucoDetector),
-                                                                       camId_(camId) {
+                                           const int fps,
+                                           const int id,
+                                           const int accumulation_time,
+                                           const std::string camId) : CameraWorker(stopSource, camData,
+                                                                          fps, id, std::move(camId)),
+                                                                      accumulationTime_(accumulation_time) {
     }
 
     void PropheseeDVSWorker::listAvailableSources() {
@@ -97,7 +86,7 @@ namespace YACC {
             return;
         }
 
-        for (auto source: sources) {
+        for (const auto &source: sources) {
             const auto &type = source.first;
             const auto &ids = source.second;
             std::string typeName;
@@ -127,6 +116,8 @@ namespace YACC {
             } catch (Metavision::CameraException &e) {
                 std::cerr << e.what() << "\n";
                 camData_.exitCode = 2;
+                stopSource_.request_stop();
+                return;
             }
         } else {
             try {
@@ -136,6 +127,8 @@ namespace YACC {
             } catch (Metavision::CameraException &e) {
                 std::cerr << e.what() << "\n";
                 camData_.exitCode = 2;
+                stopSource_.request_stop();
+                return;
             }
         }
 
@@ -188,7 +181,7 @@ namespace YACC {
             (void) cam.start_recording("./data/eventfile/raw_recording_" + ss.str() + ".raw");
 
             camData_.isRunning = cam.is_running();
-            while (cam.is_running() && !stopToken_.stop_requested()) {
+            while (cam.is_running() && !stopSource_.stop_requested()) {
                 cv::Mat localFrame;
                 {
                     std::unique_lock<std::mutex> lock(cd_frame_mutex);
@@ -206,9 +199,8 @@ namespace YACC {
 
             (void) cam.stop_recording();
             (void) cam.stop();
+        } else {
+            stopSource_.request_stop();
         }
-    }
-
-    void stop() {
     }
 }

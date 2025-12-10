@@ -1,23 +1,15 @@
 #define NOMINMAX
-#include <opencv2/core/types.hpp>
+
+#include "basler_rgb_recorder.hpp"
+
+#include <mutex>
+
 #include <opencv2/imgproc.hpp>
-#include <opencv2/objdetect/aruco_detector.hpp>
-#include <opencv2/objdetect/charuco_detector.hpp>
-#include <opencv2/highgui.hpp>
+#include <opencv2/core/mat.hpp>
 
 #include <pylon/PylonIncludes.h>
 
-#include "basler_rgb_recorder.hpp"
 #include "../utility.hpp"
-#include "../VideoViewer.hpp"
-
-#ifdef PYLON_WIN_BUILD
-#    include <pylon/PylonGUI.h>
-#endif
-
-#include <chrono>
-#include <filesystem>
-#include <ranges>
 
 
 class FrameHandler : public Pylon::CImageEventHandler {
@@ -34,13 +26,14 @@ public:
         const int height{static_cast<int>(ptrGrabResult->GetHeight())};
         const int width{static_cast<int>(ptrGrabResult->GetWidth())};
 
-        //BayerRG8
-        // cv::Mat tempFrame(height, width, CV_8UC1, ptrGrabResult->GetBuffer());
-        // cv::Mat tempFrameBGR;
-        // cv::cvtColor(tempFrame, tempFrameBGR, cv::COLOR_BayerBG2BGR);
+        //BayerRG8 (RGGB)
+        cv::Mat tempFrame(height, width, CV_8UC1, ptrGrabResult->GetBuffer());
+        cv::Mat tempFrameBGR;
+        // TODO: Change to COLOR_BayerRGGB2BGR
+        cv::cvtColor(tempFrame, tempFrame, cv::COLOR_BayerRGGB2BGR);
         int tempID{};
 
-        cv::Mat tempFrame(height, width, CV_8UC3, ptrGrabResult->GetBuffer());
+        // cv::Mat tempFrame(height, width, CV_8UC3, ptrGrabResult->GetBuffer());
         tempID = Pylon::CIntegerParameter(nodeMap_, "CounterValue").GetValue();
 
         {
@@ -57,10 +50,11 @@ private:
     GenApi::INodeMap &nodeMap_;
 };
 
-namespace YACC {
+namespace YACCP {
     void BaslerRGBWorker::setPixelFormat(GenApi::INodeMap &nodeMap) {
         // Configure pixel format and exposure time (FPS).
-        Pylon::CEnumParameter(nodeMap, "PixelFormat").SetValue("BGR8");
+        // TEST: Change back to BayerRG8
+        // Pylon::CEnumParameter(nodeMap, "PixelFormat").SetValue("BGR8");
         Pylon::CFloatParameter(nodeMap, "ExposureTime").SetValue((1.0 / static_cast<double>(fps_)) * 1e6);
     }
 
@@ -104,16 +98,13 @@ namespace YACC {
         return getDims(nodeMap);
     }
 
-    BaslerRGBWorker::BaslerRGBWorker(std::stop_token stopToken,
+    BaslerRGBWorker::BaslerRGBWorker(std::stop_source stopSource,
                                      CamData &camData,
-                                     int fps,
-                                     const cv::aruco::CharucoDetector &charucoDetector,
-                                     const std::string &camId) : stopToken_(stopToken),
-                                                                 camData_(camData),
-                                                                 fps_(fps),
-                                                                 charucoDetector_(charucoDetector) {
+                                     const int fps,
+                                     const int id,
+                                     std::string camId) : CameraWorker(stopSource, camData,
+                                                                       fps, id, std::move(camId)) {
         Pylon::PylonInitialize();
-        camId_ = camId.c_str();
     }
 
     void BaslerRGBWorker::listAvailableSources() {
@@ -140,6 +131,10 @@ namespace YACC {
         }
     }
 
+    // void BaslerRGBWorker::operator()() {
+    // start();
+    // }
+
     void BaslerRGBWorker::start() {
         (void) utility::createDirs("./data/images/basler_rgb/");
         Pylon::CInstantCamera cam;
@@ -151,15 +146,16 @@ namespace YACC {
             (void) TlFactory.EnumerateDevices(lstDevices);
             if (lstDevices.empty()) {
                 std::cerr << "No Basler cameras found.\n";
-                Pylon::PylonTerminate();
+                // Pylon::PylonTerminate();
                 camData_.exitCode = 2;
+                stopSource_.request_stop();
+                return;
             } else {
                 if (!camId_.empty()) {
-                    cam.Attach(TlFactory.CreateDevice(Pylon::CDeviceInfo().SetFullName(camId_)));
+                    cam.Attach(TlFactory.CreateDevice(Pylon::CDeviceInfo().SetFullName(camId_.data())));
                     camData_.camName = cam.GetDeviceInfo().GetModelName();
                     std::cout << "Using Basler device: " << camData_.camName << "\n";
                     camData_.isOpen = true;
-
                 } else {
                     cam.Attach(TlFactory.CreateDevice(lstDevices[0]));
                     camData_.camName = cam.GetDeviceInfo().GetModelName();
@@ -171,6 +167,8 @@ namespace YACC {
             std::cerr << "Pylon error: " << e.GetDescription() << "\n";
             Pylon::PylonTerminate();
             camData_.exitCode = EXIT_FAILURE;
+            stopSource_.request_stop();
+            return;
         }
 
         if (camData_.isOpen) {
@@ -198,7 +196,7 @@ namespace YACC {
             Pylon::CGrabResultPtr ptrGrabResult;
 
             camData_.isRunning = cam.IsGrabbing();
-            while (cam.IsGrabbing() && !stopToken_.stop_requested()) {
+            while (cam.IsGrabbing() && !stopSource_.stop_requested()) {
                 cv::Mat localFrame;
                 int localFrameID;
                 {
@@ -227,6 +225,8 @@ namespace YACC {
             cam.StopGrabbing();
             cam.Close();
             (void) cam.DeregisterImageEventHandler(&frameHandler);
+        } else {
+            stopSource_.request_stop();
         }
     }
 

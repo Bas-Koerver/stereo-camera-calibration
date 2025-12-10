@@ -1,0 +1,13 @@
+//
+// Created by Bas_K on 2025-12-05.
+//
+
+#ifndef STEREO_CAMERA_CALIBRATION_DETECTION_VALIDATOR_H
+#define STEREO_CAMERA_CALIBRATION_DETECTION_VALIDATOR_H
+
+namespace YACCP {
+    class detectionValidator {
+    };
+} // YACCP
+
+#endif //STEREO_CAMERA_CALIBRATION_DETECTION_VALIDATOR_H
