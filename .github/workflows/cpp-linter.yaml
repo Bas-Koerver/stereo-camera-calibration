@@ -1,12 +1,11 @@
 name: cpp-linter
 
 on:
+  workflow_dispatch:
   push:
-    paths:
-      - "/*"
+    branches:
+      - master
   pull_request:
-    paths:
-      - "/*"
 
 
 jobs:
