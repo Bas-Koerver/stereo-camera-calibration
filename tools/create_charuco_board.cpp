@@ -60,23 +60,23 @@ int main(int argc, char** argv)
 
     // Available arguments
     int squaresX{7};
-    app.add_option("-x, --width", squaresX, "The amount of squares in the x direction,\n default 7");
+    app.add_option("-x, --width", squaresX, "The amount of squares in the x direction")->default_val(7)->check(CLI::PositiveNumber);
 
     int squaresY{5};
-    app.add_option("-y, --height", squaresY, "The amount of squares in the y direction,\n default 5");
+    app.add_option("-y, --height", squaresY, "The amount of squares in the y direction")->default_val(5)->check(CLI::PositiveNumber);
 
     int squareLength{100}; // in pixels
-    app.add_option("-s, --square-length", squareLength, "The square length in pixels,\n default 100");
+    app.add_option("-s, --square-length", squareLength, "The square length in pixels")->default_val(100)->check(CLI::PositiveNumber);
 
     int markerLength{70}; // in pixels
-    app.add_option("-m, --marker-length", markerLength, "The ArUco marker length in pixels,\n default 70");
+    app.add_option("-m, --marker-length", markerLength, "The ArUco marker length in pixels")->default_val(70)->check(CLI::PositiveNumber);
 
     int border{squareLength - markerLength};
     app.add_option("-e, --marker-border", border,
-                   "The border size (margins) of the ArUco marker in pixels,\n default is square-length - marker-length");
+                   "The border size (margins) of the ArUco marker in pixels")->default_str("square-length - marker-length");
 
     int borderPoints{1};
-    app.add_option("-b, --border-point", borderPoints, "The amount of points (pixels) for the border,\n default 1");
+    app.add_option("-b, --border-point", borderPoints, "The amount of points (pixels) for the border")->default_val(1);
 
     int dictNumber{8};
     app.add_option("-d, --dictionary", dictNumber,
@@ -85,24 +85,24 @@ int main(int argc, char** argv)
                    "DICT_5X5_50=4, DICT_5X5_100=5, DICT_5X5_250=6, DICT_5X5_1000=7,\n"
                    "DICT_6X6_50=8, DICT_6X6_100=9, DICT_6X6_250=10, DICT_6X6_1000=11,\n"
                    "DICT_7X7_50=12, DICT_7X7_100=13, DICT_7X7_250=14, DICT_7X7_1000=15,\n"
-                   "DICT_ARUCO_ORIGINAL = 16, default DICT_6X6_50")->expected(0, 16);
-    cv::aruco::Dictionary dictionary{cv::aruco::getPredefinedDictionary(dictNumber)};
+                   "DICT_ARUCO_ORIGINAL = 16")->default_str("DICT_6X6_50")->check(CLI::Range(0, 16));
 
     std::string path{};
-    app.add_option("-p, --path", path, "The path to save the image and/or video to,\n  default is current dir");
+    app.add_option("-p, --path", path, "The path to save the image and/or video to")->default_str("current dir");
     path += "board";
 
     bool generateImage{false};
     app.add_flag("-i, --image", generateImage,
-                 "Whether to generate an image of the generated board,\n default true");
+                 "Whether to generate an image of the generated board")->default_str("true");
     generateImage = !generateImage;
 
     bool generateVideo{false};
     app.add_flag("-v, --video", generateVideo,
-                 "Whether to generate an event video of the generated board,\n default false");
+                 "Whether to generate an event video of the generated board")->default_str("false");
 
     CLI11_PARSE(app, argc, argv);
 
+    cv::aruco::Dictionary dictionary{cv::aruco::getPredefinedDictionary(dictNumber)};
     createBoard(squaresX, squaresY, squareLength, markerLength, border, borderPoints, dictionary, generateImage,
                 generateVideo, path);
 

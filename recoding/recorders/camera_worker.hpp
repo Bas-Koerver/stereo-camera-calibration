@@ -1,7 +1,12 @@
 #ifndef STEREO_CAMERA_CALIBRATION_CAMERA_WORKER_HPP
 #define STEREO_CAMERA_CALIBRATION_CAMERA_WORKER_HPP
+#include <filesystem>
 #include <mutex>
 #include <readerwriterqueue.h>
+
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+
 #include <opencv2/core/mat.hpp>
 
 
@@ -11,8 +16,8 @@ namespace YACCP {
      * @brief Simple enum to represent different camera worker types.
      */
     enum class WorkerTypes {
-        propheseeDvsEvk4,
-        baslerRgb,
+        prophesee,
+        basler,
     };
 
     /**
@@ -38,6 +43,7 @@ namespace YACCP {
         int exitCode;
         // Camera information
         std::string camName;
+        int camId;
         int width{};
         int height{};
         cv::Mat frame;
@@ -46,9 +52,22 @@ namespace YACCP {
         moodycamel::ReaderWriterQueue<int> frameRequestQ{100};
         moodycamel::BlockingReaderWriterQueue<VerifyTask> frameVerifyQ{100};
         // Viewing details
-        int x;
-        int y;
+        int windowX;
+        int windowY;
     };
+
+    inline void to_json(nlohmann::json &j, const CamData &camData) {
+        j =
+        {
+            {"isMaster", camData.isMaster},
+            {"camName", camData.camName},
+            {"width", camData.width},
+            {"height", camData.height},
+            {"windowX", camData.windowX},
+            {"windowY", camData.windowY},
+
+        };
+    }
 
 
     /**
@@ -63,12 +82,14 @@ namespace YACCP {
          * @param camDatas Reference to the camera data struct.
          * @param fps Frames per second to capture at.
          * @param id ID of the camera worker this must be the index of the correct CamData from camDatas.
+         * @param outputPath
          * @param camId A user can give a specific camera ID to connect to.
          */
         CameraWorker(std::stop_source stopSource,
                      std::vector<CamData> &camDatas,
                      int fps,
                      int id,
+                     std::filesystem::path outputPath,
                      std::string camId = {});
 
         /**
@@ -90,6 +111,7 @@ namespace YACCP {
         CamData &camData_;
         const int fps_;
         const int id_;
+        std::filesystem::path outputPath_;
         // A user can give a specific camera ID to connect to.
         std::string camId_;
     };

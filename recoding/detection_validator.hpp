@@ -1,11 +1,10 @@
-
 #ifndef STEREO_CAMERA_CALIBRATION_DETECTION_VALIDATOR_H
 #define STEREO_CAMERA_CALIBRATION_DETECTION_VALIDATOR_H
 #include <readerwriterqueue.h>
 
 #include <opencv2/objdetect/charuco_detector.hpp>
 
-#include "VideoViewer.hpp"
+#include "Video_viewer.hpp"
 
 #include "recorders/camera_worker.hpp"
 
@@ -20,7 +19,9 @@ namespace YACCP {
         DetectionValidator(std::stop_source stopSource,
                            std::vector<CamData> &camDatas,
                            const cv::aruco::CharucoDetector &charucoDetector,
-                           moodycamel::ReaderWriterQueue<BoundingBoxData> &boundingBoxQ);
+                           moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ,
+                           const std::filesystem::path &outputPath,
+                           float cornerMin = .5F);
 
 
         void start();
@@ -28,10 +29,11 @@ namespace YACCP {
     private:
         std::stop_source stopSource_;
         std::stop_token stopToken_;
-        float intersectionMin_{.5F};
         std::vector<CamData> &camDatas_;
         const cv::aruco::CharucoDetector charucoDetector_;
-        moodycamel::ReaderWriterQueue<BoundingBoxData> &boundingBoxQ_;
+        moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ_;
+        const std::filesystem::path &outputPath_;
+        float cornerMin_;
     };
 } // YACCP
 

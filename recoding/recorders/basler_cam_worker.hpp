@@ -1,23 +1,25 @@
 #ifndef STEREO_CAMERA_CALIBRATION_BASLER_RGB_RECORDER_H
 #define STEREO_CAMERA_CALIBRATION_BASLER_RGB_RECORDER_H
-#include "camera_worker.hpp"
 #include <pylon/PylonIncludes.h>
+
+#include "camera_worker.hpp"
 
 
 namespace YACCP {
-    class BaslerRGBWorker : public CameraWorker {
+    class BaslerCamWorker final : public CameraWorker {
     public:
-        BaslerRGBWorker(std::stop_source stopSource,
-                        std::vector<YACCP::CamData> &camDatas,
+        BaslerCamWorker(std::stop_source stopSource,
+                        std::vector<CamData> &camDatas,
                         int fps,
                         int id,
+                        const std::filesystem::path &outputPath,
                         std::string camId = {});
 
         void listAvailableSources() override;
 
         void start() override;
 
-        ~BaslerRGBWorker() override;
+        ~BaslerCamWorker() override;
 
     private:
         int requestedFrame_{1}; // Start from frame 1
@@ -25,8 +27,8 @@ namespace YACCP {
 
         void setPixelFormat(GenApi::INodeMap &nodeMap);
 
-        std::tuple<int, int> getSetNodeMapParameters(GenApi::INodeMap &nodeMap);
+        [[nodiscard]] std::tuple<int, int> getSetNodeMapParameters(GenApi::INodeMap &nodeMap);
     };
-}
+} // YACCP
 
 #endif //STEREO_CAMERA_CALIBRATION_BASLER_RGB_RECORDER_H

@@ -9,40 +9,49 @@
 
 
 namespace YACCP {
-    struct BoundingBoxData {
+    struct ValidatedCornersData {
         int id;
         int camId;
         std::vector<int> charucoIds;
         std::vector<cv::Point2f> charucoCorners;
+        int validatedImagePair = 0;
+        int validatedCorners = 0;
     };
 
     class VideoViewer {
     public:
         VideoViewer(std::stop_source stopSource,
                     int viewsHorizontal,
+                    int resolutionWidth,
+                    int resolutionHeight,
                     std::vector<CamData> &camDatas,
                     const cv::aruco::CharucoDetector &charucoDetector,
-                    moodycamel::ReaderWriterQueue<BoundingBoxData> &boundingBoxQ);
+                    moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ,
+                    const std::filesystem::path &outputPath,
+                    float cornerMin = .5F);
 
         void start();
 
     private:
         std::stop_source stopSource_;
         std::stop_token stopToken_;
-        int viewsHorizontal_ = 2;
-        Metavision::FrameComposer frame_composer_;
+        int viewsHorizontal_;
+        int resolutionWidth_;
+        int resolutionHeight_;
+        Metavision::FrameComposer frameComposer_;
         std::vector<CamData> &camDatas_;
         const cv::aruco::CharucoDetector charucoDetector_;
-        moodycamel::ReaderWriterQueue<BoundingBoxData> &boundingBoxQ_;
+        moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ_;
+        const std::filesystem::path &outputPath_;
+        float cornerMin_;
 
         void processFrame(std::stop_token stopToken, CamData &camData, int camRef, std::atomic<int> &camDetectMode);
 
-        std::tuple<std::vector<int>, std::vector<int> > calculateBiggestDims() const;
+        [[nodiscard]] std::tuple<std::vector<int>, std::vector<int> > calculateBiggestDims() const;
 
-        std::tuple<int, int> calculateRowColumnIndex(int camIndex) const;
+        [[nodiscard]] std::tuple<int, int> calculateRowColumnIndex(int camIndex) const;
 
-        std::vector<cv::Point> correctCordinates(const BoundingBoxData &boundingBoxData);
-
+        [[nodiscard]] std::vector<cv::Point> correctCoordinates(const ValidatedCornersData &validatedCornersData);
     };
 } // YACCP
 

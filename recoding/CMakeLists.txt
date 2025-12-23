@@ -5,11 +5,12 @@ project(stereo-camera-calibration
 
 set(CMAKE_CXX_STANDARD 23)
 
-
 find_package(MetavisionSDK COMPONENTS core stream ui REQUIRED)
 find_package(pylon REQUIRED)
 
 find_package(CLI11 REQUIRED)
+
+find_package(nlohmann_json REQUIRED)
 
 find_package(OpenCV REQUIRED)
 
@@ -32,11 +33,13 @@ add_executable(
         StereoCalibration
         camera_manager.cpp
         recorders/camera_worker.cpp recorders/camera_worker.hpp
-        recorders/prophesee_dvs_recorder.cpp recorders/prophesee_dvs_recorder.hpp
-        recorders/basler_rgb_recorder.cpp recorders/basler_rgb_recorder.hpp
+        recorders/prophesee_cam_worker.cpp recorders/prophesee_cam_worker.hpp
+        recorders/basler_cam_worker.cpp recorders/basler_cam_worker.hpp
         utility.cpp utility.hpp
-        videoViewer.cpp VideoViewer.hpp
+        Video_viewer.cpp Video_viewer.hpp
         detection_validator.cpp detection_validator.hpp
+        Image_validator.cpp
+        Image_validator.hpp
 )
 
 target_link_libraries(
@@ -45,6 +48,7 @@ target_link_libraries(
         ${OpenCV_LIBS}
         MetavisionSDK::core MetavisionSDK::stream MetavisionSDK::ui
         pylon::pylon
+        nlohmann_json::nlohmann_json
         PUBLIC
         readerwriterqueue
 )

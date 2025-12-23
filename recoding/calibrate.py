@@ -155,8 +155,6 @@ def calibrate(img_name, debug_dir):
         img2 = img_c.copy()
         img3 = img_c.copy()
 
-
-
         if frame_img_points is None or frame_img_points.size == 0 or frame_img_points.shape[0] < 3:
             return  # or just skip drawing
 
@@ -202,12 +200,10 @@ def calibrate(img_name, debug_dir):
         cv.imshow('img3', img3)
         while (True):
             k = cv.waitKey(1)
-            if k==27:
+            if k == 27:
                 break
         cv.destroyAllWindows()
         return
-
-
 
         if debug_dir:
             vis = cv.cvtColor(img, cv.COLOR_GRAY2BGR)

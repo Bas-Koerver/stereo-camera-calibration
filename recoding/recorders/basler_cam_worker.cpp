@@ -1,6 +1,6 @@
 #define NOMINMAX
 
-#include "basler_rgb_recorder.hpp"
+#include "basler_cam_worker.hpp"
 
 #include <mutex>
 
@@ -27,8 +27,8 @@ public:
             return;
         }
 
-        const int height{static_cast<int>(ptrGrabResult->GetHeight())};
         const int width{static_cast<int>(ptrGrabResult->GetWidth())};
+        const int height{static_cast<int>(ptrGrabResult->GetHeight())};
         cv::Mat tempFrameBGR;
         int tempIndex{};
 
@@ -53,9 +53,10 @@ private:
 };
 
 namespace YACCP {
-    void BaslerRGBWorker::setPixelFormat(GenApi::INodeMap &nodeMap) {
+    void BaslerCamWorker::setPixelFormat(GenApi::INodeMap &nodeMap) {
+        // TODO: Add exceptions for unsupported pixel formats.
+        // TODO: auto configure pixel format based on camera capabilities.
         // Configure pixel format and exposure time (FPS).
-        // TEST: Change back to BayerRG8
         Pylon::CEnumParameter(nodeMap, "PixelFormat").SetValue("BayerRG8");
         Pylon::CFloatParameter(nodeMap, "ExposureTime").SetValue((1.0 / static_cast<double>(fps_)) * 1e6);
     }
@@ -71,6 +72,7 @@ namespace YACCP {
     }
 
     void setTimingInterfaces(GenApi::INodeMap &nodeMap) {
+        // TODO: Add exception handling for unsupported timing interfaces.
         // Enable trigger signals on exposure active.
         Pylon::CEnumParameter(nodeMap, "LineSelector").SetValue("Line2");
         Pylon::CEnumParameter(nodeMap, "LineMode").SetValue("Output");
@@ -92,24 +94,27 @@ namespace YACCP {
         };
     }
 
-    std::tuple<int, int> BaslerRGBWorker::getSetNodeMapParameters(GenApi::INodeMap &nodeMap) {
+    std::tuple<int, int> BaslerCamWorker::getSetNodeMapParameters(GenApi::INodeMap &nodeMap) {
         setPixelFormat(nodeMap);
-        // setGainControl(nodeMap);
+        // TODO: Make configurable.
+        setGainControl(nodeMap);
         setTimingInterfaces(nodeMap);
         setCounters(nodeMap);
         return getDims(nodeMap);
     }
 
-    BaslerRGBWorker::BaslerRGBWorker(std::stop_source stopSource,
-                                     std::vector<YACCP::CamData> &camDatas,
+    BaslerCamWorker::BaslerCamWorker(std::stop_source stopSource,
+                                     std::vector<CamData> &camDatas,
                                      const int fps,
                                      const int id,
+                                     const std::filesystem::path &outputPath,
                                      std::string camId)
-        : CameraWorker(stopSource, camDatas, fps, id, std::move(camId)) {
+        : CameraWorker(stopSource, camDatas, fps, id, outputPath, std::move(camId)) {
         Pylon::PylonInitialize();
+        // TODO: Handle scenarios where the camera doesn't support external triggers
     }
 
-    void BaslerRGBWorker::listAvailableSources() {
+    void BaslerCamWorker::listAvailableSources() {
         Pylon::CTlFactory &TlFactory = Pylon::CTlFactory::GetInstance();
         Pylon::DeviceInfoList_t lstDevices;
 
@@ -137,8 +142,7 @@ namespace YACCP {
     // start();
     // }
 
-    void BaslerRGBWorker::start() {
-        (void) Utility::createDirs("./data/images/basler_rgb/");
+    void BaslerCamWorker::start() {
         Pylon::CInstantCamera cam;
 
         try {
@@ -200,7 +204,6 @@ namespace YACCP {
             camData_.isRunning = cam.IsGrabbing();
 
             if (camData_.isMaster) {
-
                 requestedFrame_ = 1 + fps_ * detectionInterval_;
                 for (auto &camData: camDatas_) {
                     if (camData.isMaster) {
@@ -255,7 +258,7 @@ namespace YACCP {
         }
     }
 
-    BaslerRGBWorker::~BaslerRGBWorker() {
+    BaslerCamWorker::~BaslerCamWorker() {
         Pylon::PylonTerminate();
     }
 }

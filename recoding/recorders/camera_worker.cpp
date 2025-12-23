@@ -6,12 +6,14 @@
 
 #include <iostream>
 #include <stop_token>
+#include <utility>
 
 namespace YACCP {
     CameraWorker::CameraWorker(std::stop_source stopSource,
-                               std::vector<YACCP::CamData> &camDatas,
-                               int fps,
-                               int id,
+                               std::vector<CamData> &camDatas,
+                               const int fps,
+                               const int id,
+                               std::filesystem::path outputPath,
                                std::string camId)
         : stopSource_(stopSource),
           stopToken_(stopSource.get_token()),
@@ -19,6 +21,7 @@ namespace YACCP {
           camData_(camDatas.at(id)),
           fps_(fps),
           id_(id),
+          outputPath_(std::move(outputPath)),
           camId_(std::move(camId)) {
     }
 

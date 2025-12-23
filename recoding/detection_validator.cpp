@@ -6,7 +6,7 @@
 #include <opencv2/objdetect/charuco_detector.hpp>
 
 #include "Utility.hpp"
-#include "VideoViewer.hpp"
+#include "Video_viewer.hpp"
 
 #include "recorders/camera_worker.hpp"
 
@@ -14,12 +14,16 @@ namespace YACCP {
     DetectionValidator::DetectionValidator(std::stop_source stopSource,
                                            std::vector<CamData> &camDatas,
                                            const cv::aruco::CharucoDetector &charucoDetector,
-                                           moodycamel::ReaderWriterQueue<BoundingBoxData> &boundingBoxQ)
+                                           moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ,
+                                           const std::filesystem::path &outputPath,
+                                           float cornerMin)
         : stopSource_(stopSource),
           stopToken_(stopSource.get_token()),
           camDatas_(camDatas),
           charucoDetector_(charucoDetector),
-          boundingBoxQ_(boundingBoxQ) {
+          valCornersQ_(valCornersQ),
+          outputPath_(outputPath),
+          cornerMin_(cornerMin) {
     }
 
     void DetectionValidator::start() {
@@ -38,11 +42,15 @@ namespace YACCP {
             do {
                 // Get a new task from every camera, skip cameras that are already correct (have the highest taskID/frame index).
                 for (auto i{0}; i < camDatas_.size(); ++i) {
-                    if (std::find(camTaskCorrect.begin(), camTaskCorrect.end(), i) != camTaskCorrect.end()) {
-                        continue;
-                    }
+                    if (std::find(camTaskCorrect.begin(), camTaskCorrect.end(), i) != camTaskCorrect.end()) continue;
 
-                    camDatas_[i].frameVerifyQ.wait_dequeue(verifyTasks[i]);
+                    while (!stopToken_.stop_requested() &&
+                           !camDatas_[i].frameVerifyQ.wait_dequeue_timed(verifyTasks[i],
+                                                                         std::chrono::milliseconds(100)));
+                }
+
+                if (stopToken_.stop_requested()) {
+                    return;
                 }
 
                 // Get the largest task ID.
@@ -67,19 +75,20 @@ namespace YACCP {
 
             cv::Mat grayFrame;
             cv::cvtColor(verifyTasks[0].frame, grayFrame, cv::COLOR_BGR2GRAY);
-            CharucoResults charucoResults = Utility::findBoard(charucoDetector_, grayFrame);
-            if (!charucoResults.boardFound) {
-                continue;
-            }
+            CharucoResults charucoResults = Utility::findBoard(charucoDetector_, grayFrame, std::floor(
+                                                                   static_cast<float>(cornerAmount) * cornerMin_));
+            if (!charucoResults.boardFound) continue;
+
             allCharucoCorners[0] = charucoResults.charucoCorners;
-            std::vector<int> vec1{charucoResults.charucoIds};
+            std::vector vec1{charucoResults.charucoIds};
 
             if (camDatas_.size() > 1) {
                 std::vector<int> vec2;
 
                 for (auto i{1}; i < camDatas_.size(); ++i) {
                     cv::cvtColor(verifyTasks[i].frame, grayFrame, cv::COLOR_BGR2GRAY);
-                    charucoResults = Utility::findBoard(charucoDetector_, grayFrame);
+                    charucoResults = Utility::findBoard(charucoDetector_, grayFrame, std::floor(
+                                                            static_cast<float>(cornerAmount) * cornerMin_));
                     if (!charucoResults.boardFound) {
                         continue;
                     }
@@ -89,14 +98,14 @@ namespace YACCP {
                     vec1 = Utility::intersection(vec1, vec2);
 
                     if (static_cast<float>(vec1.size()) < std::floor(
-                            static_cast<float>(cornerAmount) * intersectionMin_)) {
+                            static_cast<float>(cornerAmount) * cornerMin_)) {
                         skipLoop = true;
                         break;
                     }
                 }
             } else {
                 if (static_cast<float>(vec1.size()) < std::floor(
-                        static_cast<float>(cornerAmount) * intersectionMin_)) {
+                        static_cast<float>(cornerAmount) * cornerMin_)) {
                     skipLoop = true;
                 }
             }
@@ -108,19 +117,26 @@ namespace YACCP {
             for (auto i{0}; i < camDatas_.size(); ++i) {
                 // Save image.
                 // TODO: Make path configurable.
-                std::string imagePath = "./data/images/cam_" + std::to_string(i) + "/";
-                std::string imageName = "frame_" + std::to_string(verifyTasks[i].id) + ".png";
-                Utility::createDirs(imagePath);
 
-                cv::imwrite(imagePath + imageName, verifyTasks[i].frame);
+                std::filesystem::path imagePath = outputPath_ / ("images/raw/cam_" + std::to_string(i));
+                std::string imageName = "frame_" + std::to_string(verifyTasks[i].id) + ".png";
+                (void) std::filesystem::create_directories(imagePath);
+
+                cv::imwrite((imagePath / imageName).string(), verifyTasks[i].frame);
 
                 // Enqueue bounding box data for viewing.
-                BoundingBoxData boundingBoxData;
-                boundingBoxData.id = verifyTasks[i].id;
-                boundingBoxData.camId = i;
-                boundingBoxData.charucoIds = vec1;
-                boundingBoxData.charucoCorners = allCharucoCorners[i];
-                (void) boundingBoxQ_.enqueue(boundingBoxData);
+                ValidatedCornersData validatedCornersData;
+
+                if (i == 0) {
+                    validatedCornersData.validatedImagePair = 1;
+                    validatedCornersData.validatedCorners = static_cast<int>(vec1.size());
+                }
+
+                validatedCornersData.id = verifyTasks[i].id;
+                validatedCornersData.camId = i;
+                validatedCornersData.charucoIds = vec1;
+                validatedCornersData.charucoCorners = allCharucoCorners[i];
+                (void) valCornersQ_.enqueue(validatedCornersData);
             }
         }
     }

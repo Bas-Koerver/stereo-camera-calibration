@@ -14,14 +14,12 @@ namespace YACCP {
 
     class Utility {
     public:
-        static bool createDirs(const std::string &path);
-
         template<typename T>
-        static std::vector<T> intersection(std::vector<T> vec1, std::vector<T> vec2);
+        [[nodiscard]] static std::vector<T> intersection(std::vector<T> vec1, std::vector<T> vec2);
 
-        static CharucoResults findBoard(const cv::aruco::CharucoDetector &charucoDector,
-                                        cv::Mat &gray,
-                                        int cornerMin = 3);
+        [[nodiscard]] static CharucoResults findBoard(const cv::aruco::CharucoDetector &charucoDetector,
+                                                      const cv::Mat &gray,
+                                                      int cornerMin = 3);
     };
 
     template<typename T>

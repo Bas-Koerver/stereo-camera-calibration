@@ -2,12 +2,22 @@
 #include <metavision/sdk/ui/utils/window.h>
 #include <metavision/sdk/ui/utils/event_loop.h>
 
-#include "VideoViewer.hpp"
+#include "Video_viewer.hpp"
 
+#include <fstream>
+
+#include <nlohmann/json.hpp>
 #include <numeric>
 #include <vector>
 
 #include "Utility.hpp"
+
+cv::Scalar getColourGradient(int index, int maxIndex) {
+    const double ratio{255.0 / (static_cast<double>(maxIndex) / 2.0)};
+    const int red = std::min(255, static_cast<int>(std::round(2 * 255 - ratio * index)));
+    const int green = std::min(255, static_cast<int>(std::round(ratio * index)));
+    return cv::Scalar(46., green, red);
+}
 
 namespace YACCP {
     template<typename T>
@@ -18,15 +28,23 @@ namespace YACCP {
 
     VideoViewer::VideoViewer(std::stop_source stopSource,
                              int viewsHorizontal,
+                             int resolutionWidth,
+                             int resolutionHeight,
                              std::vector<CamData> &camDatas,
                              const cv::aruco::CharucoDetector &charucoDetector,
-                             moodycamel::ReaderWriterQueue<BoundingBoxData> &boundingBoxQ)
+                             moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ,
+                             const std::filesystem::path &outputPath,
+                             float cornerMin)
         : stopSource_(stopSource),
           stopToken_(stopSource.get_token()),
           viewsHorizontal_(viewsHorizontal),
+          resolutionWidth_(resolutionWidth),
+          resolutionHeight_(resolutionHeight),
           camDatas_(camDatas),
           charucoDetector_(charucoDetector),
-          boundingBoxQ_(boundingBoxQ) {
+          valCornersQ_(valCornersQ),
+          outputPath_(outputPath),
+          cornerMin_(cornerMin) {
     }
 
     void VideoViewer::processFrame(std::stop_token stopToken,
@@ -49,7 +67,7 @@ namespace YACCP {
                     markerIds,
                     markerCorners,
                     charucoIds,
-                    charucoCorners] = Utility::findBoard(charucoDetector_, grayFrame);
+                    charucoCorners] = Utility::findBoard(charucoDetector_, grayFrame, 0);
 
                 if (!markerIds.empty())
                     cv::aruco::drawDetectedMarkers(localFrame, markerCorners, markerIds);
@@ -58,7 +76,7 @@ namespace YACCP {
                                                           cv::Scalar(0, 255, 0));
             }
 
-            frame_composer_.update_subimage(camRef, localFrame);
+            frameComposer_.update_subimage(camRef, localFrame);
         }
     }
 
@@ -84,7 +102,7 @@ namespace YACCP {
         // Calculate the camera with the highest frame.
         for (int rowIndex = 0; rowIndex < viewsVertical; ++rowIndex) {
             int maxHeight{};
-            for (int i = rowIndex * viewsHorizontal_; i < (rowIndex + 1) * viewsHorizontal_; i++) {
+            for (int i = rowIndex * viewsHorizontal_; i < (rowIndex + 1) * viewsHorizontal_; ++i) {
                 if (i + 1 > camDatas_.size()) break;
                 if (camDatas_[i].height > maxHeight) maxHeight = camDatas_[i].height;
             }
@@ -104,14 +122,14 @@ namespace YACCP {
         return {rowIndex, columnIndex};
     }
 
-    std::vector<cv::Point> VideoViewer::correctCordinates(const BoundingBoxData &boundingBoxData) {
+    std::vector<cv::Point> VideoViewer::correctCoordinates(const ValidatedCornersData &validatedCornersData) {
         cv::Point2f offset{
-            static_cast<float>(camDatas_[boundingBoxData.camId].x),
-            static_cast<float>(camDatas_[boundingBoxData.camId].y)
+            static_cast<float>(camDatas_[validatedCornersData.camId].windowX),
+            static_cast<float>(camDatas_[validatedCornersData.camId].windowY)
         };
         std::vector<cv::Point> correctedCorners;
 
-        for (const auto &corner: boundingBoxData.charucoCorners) {
+        for (const auto &corner: validatedCornersData.charucoCorners) {
             correctedCorners.emplace_back(static_cast<cv::Point>(corner + offset));
         }
         return correctedCorners;
@@ -120,13 +138,19 @@ namespace YACCP {
     void VideoViewer::start() {
         std::vector<int> camRefs;
         std::vector<std::jthread> threads;
+        std::vector<std::vector<cv::Point> > pts;
         std::atomic camDetectMode = -2;
+        std::atomic detectLayerMode = true;
+        std::atomic detectLayerClean = false;
+        auto validatedImagePairs = 0;
+        auto validatedCorners = 0;
+        cv::Scalar textColour;
 
         auto [maxWidthVec, maxHeightVec] = calculateBiggestDims();
 
         // Determine the topmost x and leftmost y coordinate for a given camera.
         // Create a subimage in the frame composer for each camera.
-        for (auto i{0}; i < camDatas_.size(); i++) {
+        for (auto i{0}; i < camDatas_.size(); ++i) {
             auto [row, column] = calculateRowColumnIndex(i);
 
             int paddingX{(maxWidthVec[column] - camDatas_[i].width) >> 1};
@@ -138,38 +162,49 @@ namespace YACCP {
             int x = sumVector(maxWidthVec, column) + paddingX + extraSpacingX;
             int y = sumVector(maxHeightVec, row) + paddingY + extraSpacingY;
 
-            camDatas_[i].x = x;
-            camDatas_[i].y = y;
-            camRefs.emplace_back(frame_composer_.add_new_subimage_parameters(
+            camDatas_[i].windowX = x;
+            camDatas_[i].windowY = y;
+
+            camRefs.emplace_back(frameComposer_.add_new_subimage_parameters(
                     x, y,
                     {static_cast<unsigned>(camDatas_[i].width), static_cast<unsigned>(camDatas_[i].height)},
                     Metavision::FrameComposer::GrayToColorOptions())
             );
         }
 
-        int screenWidth = 1920;
-        int screenHeight = 1080;
+        // Create json object with camera data.
+        nlohmann::json j = nlohmann::json::object();
+        for (auto i{0}; i < camDatas_.size(); ++i) {
+            j["cam_" + std::to_string(i)] = camDatas_[i];
+        }
+        // Save json to file.
+        std::ofstream file(outputPath_ / "camera_data.json");
+        file << j.dump(4);
 
-        double scaleX{static_cast<double>(screenWidth) / frame_composer_.get_total_width()};
-        double scaleY{static_cast<double>(screenHeight) / frame_composer_.get_total_height()};
-
+        double scaleX{static_cast<double>(resolutionWidth_) / frameComposer_.get_total_width()};
+        double scaleY{static_cast<double>(resolutionHeight_) / frameComposer_.get_total_height()};
         double scale{std::min(scaleX, scaleY)};
 
-        int width{(frame_composer_.get_total_width())};
-        int height{(frame_composer_.get_total_height())};
+        int width{(frameComposer_.get_total_width())};
+        int height{(frameComposer_.get_total_height())};
         cv::Mat overlay = cv::Mat::zeros(height, width, CV_8UC3);
         cv::Mat mask = cv::Mat::zeros(height, width, CV_8UC1);
         cv::Mat display{height, width, CV_8UC3};
 
-        Metavision::Window window("testing", width * scale, height * scale,
+        Metavision::Window window("Recording board detections", width * scale, height * scale,
                                   Metavision::Window::RenderMode::BGR);
 
         window.set_keyboard_callback(
-            [&camDetectMode, &camRefs, this](Metavision::UIKeyEvent key,
-                                             int scancode,
-                                             Metavision::UIAction action,
-                                             int mods) {
+            [
+                this,
+                &camDetectMode,
+                &camRefs,
+                &detectLayerMode,
+                &detectLayerClean
+            ](Metavision::UIKeyEvent key, int scancode, Metavision::UIAction action, int mods) {
                 int mode;
+                bool layerClean;
+                bool layerMode;
                 if (action == Metavision::UIAction::RELEASE) {
                     switch (key) {
                         case Metavision::UIKeyEvent::KEY_ESCAPE:
@@ -201,6 +236,22 @@ namespace YACCP {
                                         "\n";
                             }
                             break;
+                        case Metavision::UIKeyEvent::KEY_L:
+                            layerClean = detectLayerClean.load(std::memory_order_relaxed);
+                            if (!layerClean) {
+                                detectLayerClean.store(true, std::memory_order_relaxed);
+                                std::cout << "Cleaning detection overlay\n";
+                            }
+                            break;
+                        case Metavision::UIKeyEvent::KEY_Z:
+                            layerMode = detectLayerMode.load(std::memory_order_relaxed);
+                            if (!layerMode) {
+                                detectLayerMode.store(true, std::memory_order_relaxed);
+                                std::cout << "Enabling detection overlay mode\n";
+                            } else {
+                                detectLayerMode.store(false, std::memory_order_relaxed);
+                                std::cout << "Disabling detection overlay mode\n";
+                            }
                     }
                 }
             });
@@ -213,22 +264,55 @@ namespace YACCP {
             );
         }
 
+
         while (!stopToken_.stop_requested()) {
-            cv ::Mat frame{frame_composer_.get_full_image()};
+            bool layerClean{detectLayerClean.load(std::memory_order_relaxed)};
+            bool layerMode{detectLayerMode.load(std::memory_order_relaxed)};
+            cv::Mat frame{frameComposer_.get_full_image()};
             if (frame.empty()) {
                 continue;
             }
+            frame.copyTo(display);
 
-            BoundingBoxData boundingBoxData;
-            if (boundingBoxQ_.try_dequeue(boundingBoxData)) {
-                auto correctedCorners = correctCordinates(boundingBoxData);
-                const std::vector<std::vector<cv::Point>> contours{correctedCorners};
-                cv::polylines(overlay, contours, false, cv::Scalar(0., 255., 0.), 2);
-                cv::polylines(mask, contours, false, cv::Scalar(255), 2);
+            ValidatedCornersData validatedCornersData;
+            if (valCornersQ_.try_dequeue(validatedCornersData)) {
+                // Update the validated counts.
+                // Only camera with index 0 should have the real data, the other ones should be 0.
+                validatedImagePairs += validatedCornersData.validatedImagePair;
+                validatedCorners += validatedCornersData.validatedCorners;
+
+                auto correctedCorners = correctCoordinates(validatedCornersData);
+                pts.clear();
+                pts.emplace_back(correctedCorners);
+                cv::polylines(overlay, pts, false, cv::Scalar{0., 255., 0.}, 2);
+                cv::polylines(mask, pts, false, cv::Scalar{255.}, 2);
+            }
+            if (layerClean) {
+                overlay.setTo(cv::Scalar{0., 0., 0.});
+                mask.setTo(cv::Scalar{0.});
+                detectLayerClean.store(false, std::memory_order_relaxed);
+            }
+            if (layerMode) {
+                overlay.copyTo(display, mask);
             }
 
-            frame.copyTo(display);
-            overlay.copyTo(display, mask);
+            textColour = getColourGradient(validatedCorners, 960);
+
+            cv::putText(display,
+                        "Validated image pairs: " + std::to_string(validatedImagePairs),
+                        cv::Point(10, height - 60),
+                        cv::FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        textColour,
+                        2);
+
+            cv::putText(display,
+                        "Validated corners: " + std::to_string(validatedCorners),
+                        cv::Point(10, height - 30),
+                        cv::FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        textColour,
+                        2);
 
             // TODO: Add verified image count and amount of verified points/corners.
             window.show(display);

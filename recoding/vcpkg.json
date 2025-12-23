@@ -6,6 +6,10 @@
     {
       "name": "cli11",
       "version>=": "2.6.1"
+    },
+    {
+      "name": "nlohmann-json",
+      "version>=": "3.12.0#1"
     }
   ]
 }

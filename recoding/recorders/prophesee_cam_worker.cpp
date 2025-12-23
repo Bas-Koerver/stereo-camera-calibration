@@ -7,7 +7,7 @@
 #include <metavision/hal/facilities/i_trigger_in.h>
 #include <metavision/hal/facilities/i_ll_biases.h>
 
-#include "prophesee_dvs_recorder.hpp"
+#include "prophesee_cam_worker.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -46,6 +46,7 @@ namespace YACCP {
     void configureFacilities(Metavision::Camera &camera) {
         Metavision::Device &device = camera.get_device();
         configureBiases(device);
+        // TODO: Handle scenarios where the camera doesn't support external triggers
         configureTimingInterfaces(device);
     }
 
@@ -65,19 +66,20 @@ namespace YACCP {
         }
     }
 
-    PropheseeDVSWorker::PropheseeDVSWorker(std::stop_source stopSource,
-                                           std::vector<YACCP::CamData> &camDatas,
+    PropheseeCamWorker::PropheseeCamWorker(std::stop_source stopSource,
+                                           std::vector<CamData> &camDatas,
                                            const int fps,
                                            const int id,
                                            const int accumulation_time,
                                            const int fallingEdgePolarity,
+                                           const std::filesystem::path &outputPath,
                                            const std::string camId)
-        : CameraWorker(stopSource, camDatas, fps, id, std::move(camId)),
+        : CameraWorker(stopSource, camDatas, fps, id, outputPath, std::move(camId)),
           accumulationTime_(accumulation_time),
           fallingEdgePolarity_(fallingEdgePolarity) {
     }
 
-    void PropheseeDVSWorker::listAvailableSources() {
+    void PropheseeCamWorker::listAvailableSources() {
         Metavision::AvailableSourcesList sources{Metavision::Camera::list_online_sources()};
 
         if (sources.empty()) {
@@ -102,9 +104,7 @@ namespace YACCP {
     }
 
 
-    void PropheseeDVSWorker::start() {
-        (void) Utility::createDirs("./data/eventfile/");
-
+    void PropheseeCamWorker::start() {
         Metavision::Camera cam;
 
         if (camId_.empty()) {
@@ -172,8 +172,7 @@ namespace YACCP {
 
             (void) cam.ext_trigger().add_callback(
                 [this, &onDemandFrameGenerator, &requestNew](const Metavision::EventExtTrigger *begin,
-                                                const Metavision::EventExtTrigger *end) {
-
+                                                             const Metavision::EventExtTrigger *end) {
                     if (requestedFrame_ < 0) {
                         (void) camData_.frameRequestQ.try_dequeue(requestedFrame_);
                     }
@@ -211,16 +210,9 @@ namespace YACCP {
                     onDemandFrameGenerator.process_events(begin, end);
                 });
 
-            auto now = std::chrono::system_clock::now();
-            auto localTime = std::chrono::system_clock::to_time_t(now);
-            std::stringstream ss;
-
-            ss << std::put_time(std::localtime(&localTime), "%F_%H-%M-%S");
-
-            // TODO: Make path configurable.
-            // TODO: Make eventfile recording optional.
+            // TODO: Make event file recording optional.
             (void) cam.start();
-            (void) cam.start_recording("./data/eventfile/raw_recording_" + ss.str() + ".raw");
+            (void) cam.start_recording(outputPath_ / "event_file.raw");
 
             camData_.isRunning = cam.is_running();
             while (cam.is_running() && !stopToken_.stop_requested()) {

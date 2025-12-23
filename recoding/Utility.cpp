@@ -6,20 +6,15 @@
 #include "Utility.hpp"
 
 namespace YACCP {
-    bool Utility::createDirs(const std::string &path) {
-        std::filesystem::path p(path);
-        return std::filesystem::create_directories(p);
-    }
-
     // MISRA deviation: OpenCV Charuco API requires std::vector
-    CharucoResults Utility::findBoard(const cv::aruco::CharucoDetector &charucoDector,
-                                      cv::Mat &gray,
-                                      int cornerMin) {
+    CharucoResults Utility::findBoard(const cv::aruco::CharucoDetector &charucoDetector,
+                                      const cv::Mat &gray,
+                                      const int cornerMin) {
         CharucoResults charucoResults;
 
-        charucoDector.detectBoard(gray, charucoResults.charucoCorners, charucoResults.charucoIds,
-                                  charucoResults.markerCorners,
-                                  charucoResults.markerIds);
+        charucoDetector.detectBoard(gray, charucoResults.charucoCorners, charucoResults.charucoIds,
+                                    charucoResults.markerCorners,
+                                    charucoResults.markerIds);
 
         if (charucoResults.charucoCorners.size() > cornerMin) {
             charucoResults.boardFound = true;
