@@ -9,6 +9,7 @@
 
 #include <pylon/PylonIncludes.h>
 
+#include "../job_data.hpp"
 #include "../utility.hpp"
 #include "../detection_validator.hpp"
 
@@ -153,41 +154,39 @@ namespace YACCP {
             if (lstDevices.empty()) {
                 std::cerr << "No Basler cameras found.\n";
                 // Pylon::PylonTerminate();
-                camData_.exitCode = 2;
+                camData_.runtimeData.exitCode = 2;
                 stopSource_.request_stop();
                 return;
             } else {
                 if (!camId_.empty()) {
                     cam.Attach(TlFactory.CreateDevice(Pylon::CDeviceInfo().SetFullName(camId_.data())));
-                    camData_.camName = cam.GetDeviceInfo().GetModelName();
-                    std::cout << "Using Basler device: " << camData_.camName << "\n";
-                    camData_.isOpen = true;
+                    camData_.info.camName = cam.GetDeviceInfo().GetModelName();
+                    std::cout << "Using Basler device: " << camData_.info.camName << "\n";
+                    camData_.runtimeData.isOpen = true;
                 } else {
                     cam.Attach(TlFactory.CreateDevice(lstDevices[0]));
-                    camData_.camName = cam.GetDeviceInfo().GetModelName();
-                    std::cout << "Using Basler device: " << camData_.camName << "\n";
-                    camData_.isOpen = true;
+                    camData_.info.camName = cam.GetDeviceInfo().GetModelName();
+                    std::cout << "Using Basler device: " << camData_.info.camName << "\n";
+                    camData_.runtimeData.isOpen = true;
                 }
             }
         } catch (const GenICam::GenericException &e) {
             std::cerr << "Pylon error: " << e.GetDescription() << "\n";
             Pylon::PylonTerminate();
-            camData_.exitCode = EXIT_FAILURE;
+            camData_.runtimeData.exitCode = EXIT_FAILURE;
             stopSource_.request_stop();
             return;
         }
 
-        if (camData_.isOpen) {
+        if (camData_.runtimeData.isOpen) {
             cam.Open();
             GenApi::INodeMap &nodeMap = cam.GetNodeMap();
             auto [width, height] = getSetNodeMapParameters(nodeMap);
-            camData_.width = width;
-            camData_.height = height;
+            camData_.info.resolution.width = width;
+            camData_.info.resolution.height = height;
 
             cv::Mat grayFrame;
             cv::Mat overlay{height, width, CV_8UC3, cv::Scalar(0, 0, 0)};
-
-            auto startTime = std::chrono::system_clock::now();
 
             std::mutex frameMutex;
             cv::Mat frame;
@@ -199,17 +198,15 @@ namespace YACCP {
 
             cam.StartGrabbing(Pylon::GrabStrategy_LatestImageOnly, Pylon::GrabLoop_ProvidedByInstantCamera);
 
-            // Pylon::CGrabResultPtr ptrGrabResult;
+            camData_.runtimeData.isRunning = cam.IsGrabbing();
 
-            camData_.isRunning = cam.IsGrabbing();
-
-            if (camData_.isMaster) {
+            if (camData_.info.isMaster) {
                 requestedFrame_ = 1 + fps_ * detectionInterval_;
                 for (auto &camData: camDatas_) {
-                    if (camData.isMaster) {
+                    if (camData.info.isMaster) {
                         continue;
                     }
-                    camData.frameRequestQ.enqueue(requestedFrame_);
+                    camData.runtimeData.frameRequestQ.enqueue(requestedFrame_);
                 }
 
                 while (cam.IsGrabbing() && !stopToken_.stop_requested()) {
@@ -225,24 +222,24 @@ namespace YACCP {
                     }
                     // Frame used for visualisation
                     {
-                        std::unique_lock<std::mutex> lock{camData_.m};
-                        camData_.frame = localFrame.clone();
+                        std::unique_lock<std::mutex> lock{camData_.runtimeData.m};
+                        camData_.runtimeData.frame = localFrame.clone();
                     }
 
                     if (localFrameIndex >= requestedFrame_) {
                         VerifyTask frameData;
                         frameData.id = requestedFrame_;
                         frameData.frame = localFrame.clone();
-                        camData_.frameVerifyQ.enqueue(frameData);
+                        camData_.runtimeData.frameVerifyQ.enqueue(frameData);
 
                         requestedFrame_ = localFrameIndex + fps_ * detectionInterval_;
                         // lastRequestedFrame = requestedFrame_;
 
                         for (auto &camData: camDatas_) {
-                            if (camData.isMaster) {
+                            if (camData.info.isMaster) {
                                 continue;
                             }
-                            camData.frameRequestQ.enqueue(requestedFrame_);
+                            camData.runtimeData.frameRequestQ.enqueue(requestedFrame_);
                         }
                     }
                 }

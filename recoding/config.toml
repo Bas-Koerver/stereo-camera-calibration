@@ -1,0 +1,11 @@
+[board]
+squares_x = 7
+squares_y = 5
+square_length = 0.0295
+marker_length = 0.0206
+
+[detection]
+detection_interval = 2
+refine = false
+
+

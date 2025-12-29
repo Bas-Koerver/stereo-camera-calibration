@@ -1,8 +1,0 @@
-[
-{
-  "directory": "C:/Users/Bas_K/source/repos/Thesis/stereo-camera-calibration/recoding/cmake-build-debug-visual-studio",
-  "command": "C:\\PROGRA~1\\MIB055~1\\2022\\COMMUN~1\\VC\\Tools\\MSVC\\1444~1.352\\bin\\Hostx64\\x64\\cl.exe  /nologo /TP -DBOOST_BIND_GLOBAL_PLACEHOLDERS -DGLFW_DLL -external:I\"C:\\Program Files\\Prophesee\\include\" -external:I\"C:\\Program Files\\Prophesee\\third_party\\include\" -external:W0 /DWIN32 /D_WINDOWS /EHsc /Ob0 /Od /RTC1 -std:c++latest -MDd -Zi /FoCMakeFiles\\prophesee-dvs-recorder.dir\\prophesee_dvs_recorder.cpp.obj /FdTARGET_COMPILE_PDB /FS -c C:\\Users\\Bas_K\\source\\repos\\Thesis\\stereo-camera-calibration\\recoding\\prophesee_dvs_recorder.cpp",
-  "file": "C:\\Users\\Bas_K\\source\\repos\\Thesis\\stereo-camera-calibration\\recoding\\prophesee_dvs_recorder.cpp",
-  "output": "CMakeFiles\\prophesee-dvs-recorder.dir\\prophesee_dvs_recorder.cpp.obj"
-}
-]

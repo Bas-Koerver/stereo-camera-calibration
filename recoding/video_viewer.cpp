@@ -10,6 +10,7 @@
 #include <numeric>
 #include <vector>
 
+#include "job_data.hpp"
 #include "utility.hpp"
 
 cv::Scalar getColourGradient(int index, int maxIndex) {
@@ -54,8 +55,8 @@ namespace YACCP {
         while (!stopToken.stop_requested()) {
             cv::Mat localFrame;
             {
-                std::unique_lock<std::mutex> lock(camData.m);
-                camData.frame.copyTo(localFrame);
+                std::unique_lock<std::mutex> lock(camData.runtimeData.m);
+                camData.runtimeData.frame.copyTo(localFrame);
             }
 
             int mode = camDetectMode.load(std::memory_order_relaxed);
@@ -63,16 +64,14 @@ namespace YACCP {
             if (mode == -1 || mode == camRef) {
                 cv::Mat grayFrame;
                 cv::cvtColor(localFrame, grayFrame, cv::COLOR_BGR2GRAY);
-                auto [boardFound,
-                    markerIds,
-                    markerCorners,
-                    charucoIds,
-                    charucoCorners] = Utility::findBoard(charucoDetector_, grayFrame, 0);
 
-                if (!markerIds.empty())
-                    cv::aruco::drawDetectedMarkers(localFrame, markerCorners, markerIds);
-                if (!charucoIds.empty())
-                    cv::aruco::drawDetectedCornersCharuco(localFrame, charucoCorners, charucoIds,
+                CharucoResults charucoResults{Utility::findBoard(charucoDetector_, grayFrame, 0)};
+
+                if (!charucoResults.markerIds.empty())
+                    cv::aruco::drawDetectedMarkers(localFrame, charucoResults.markerCorners, charucoResults.markerIds);
+                if (!charucoResults.charucoIds.empty())
+                    cv::aruco::drawDetectedCornersCharuco(localFrame, charucoResults.charucoCorners,
+                                                          charucoResults.charucoIds,
                                                           cv::Scalar(0, 255, 0));
             }
 
@@ -95,7 +94,7 @@ namespace YACCP {
             for (int i = columnIndex; i <= columnIndex + (viewsVertical - 1) * viewsHorizontal_;
                  i += viewsHorizontal_) {
                 if (i + 1 > camDatas_.size()) break;
-                if (camDatas_[i].width > maxWidth) maxWidth = camDatas_[i].width;
+                if (camDatas_[i].info.resolution.width > maxWidth) maxWidth = camDatas_[i].info.resolution.width;
             }
             maxWidthVec.push_back(maxWidth);
         }
@@ -104,7 +103,7 @@ namespace YACCP {
             int maxHeight{};
             for (int i = rowIndex * viewsHorizontal_; i < (rowIndex + 1) * viewsHorizontal_; ++i) {
                 if (i + 1 > camDatas_.size()) break;
-                if (camDatas_[i].height > maxHeight) maxHeight = camDatas_[i].height;
+                if (camDatas_[i].info.resolution.height > maxHeight) maxHeight = camDatas_[i].info.resolution.height;
             }
             maxHeightVec.push_back(maxHeight);
         }
@@ -124,8 +123,8 @@ namespace YACCP {
 
     std::vector<cv::Point> VideoViewer::correctCoordinates(const ValidatedCornersData &validatedCornersData) {
         cv::Point2f offset{
-            static_cast<float>(camDatas_[validatedCornersData.camId].windowX),
-            static_cast<float>(camDatas_[validatedCornersData.camId].windowY)
+            static_cast<float>(camDatas_[validatedCornersData.camId].info.camViewData.windowX),
+            static_cast<float>(camDatas_[validatedCornersData.camId].info.camViewData.windowY)
         };
         std::vector<cv::Point> correctedCorners;
 
@@ -142,8 +141,8 @@ namespace YACCP {
         std::atomic camDetectMode = -2;
         std::atomic detectLayerMode = true;
         std::atomic detectLayerClean = false;
-        auto validatedImagePairs = 0;
-        auto validatedCorners = 0;
+        auto validatedImagePairs{0};
+        auto validatedCorners{0};
         cv::Scalar textColour;
 
         auto [maxWidthVec, maxHeightVec] = calculateBiggestDims();
@@ -153,8 +152,8 @@ namespace YACCP {
         for (auto i{0}; i < camDatas_.size(); ++i) {
             auto [row, column] = calculateRowColumnIndex(i);
 
-            int paddingX{(maxWidthVec[column] - camDatas_[i].width) >> 1};
-            int paddingY{(maxHeightVec[row] - camDatas_[i].height) >> 1};
+            int paddingX{(maxWidthVec[column] - camDatas_[i].info.resolution.width) >> 1};
+            int paddingY{(maxHeightVec[row] - camDatas_[i].info.resolution.height) >> 1};
 
             int extraSpacingX = column * 10;
             int extraSpacingY = row * 10;
@@ -162,24 +161,23 @@ namespace YACCP {
             int x = sumVector(maxWidthVec, column) + paddingX + extraSpacingX;
             int y = sumVector(maxHeightVec, row) + paddingY + extraSpacingY;
 
-            camDatas_[i].windowX = x;
-            camDatas_[i].windowY = y;
+            camDatas_[i].info.camViewData.windowX = x;
+            camDatas_[i].info.camViewData.windowY = y;
 
             camRefs.emplace_back(frameComposer_.add_new_subimage_parameters(
                     x, y,
-                    {static_cast<unsigned>(camDatas_[i].width), static_cast<unsigned>(camDatas_[i].height)},
+                    {
+                        static_cast<unsigned>(camDatas_[i].info.resolution.width),
+                        static_cast<unsigned>(camDatas_[i].info.resolution.height)
+                    },
                     Metavision::FrameComposer::GrayToColorOptions())
             );
         }
 
-        // Create json object with camera data.
-        nlohmann::json j = nlohmann::json::object();
-        for (auto i{0}; i < camDatas_.size(); ++i) {
-            j["cam_" + std::to_string(i)] = camDatas_[i];
-        }
-        // Save json to file.
-        std::ofstream file(outputPath_ / "camera_data.json");
-        file << j.dump(4);
+
+
+
+
 
         double scaleX{static_cast<double>(resolutionWidth_) / frameComposer_.get_total_width()};
         double scaleY{static_cast<double>(resolutionHeight_) / frameComposer_.get_total_height()};
@@ -224,7 +222,8 @@ namespace YACCP {
                             mode = camDetectMode.load(std::memory_order_relaxed);
                             if (mode > 0) {
                                 camDetectMode.store(mode - 1, std::memory_order_relaxed);
-                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].camName <<
+                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].info.camName
+                                        <<
                                         "\n";
                             }
                             break;
@@ -232,7 +231,8 @@ namespace YACCP {
                             mode = camDetectMode.load(std::memory_order_relaxed);
                             if (mode < static_cast<int>(camRefs.size()) - 1 && mode >= -1) {
                                 camDetectMode.store(mode + 1, std::memory_order_relaxed);
-                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].camName <<
+                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].info.camName
+                                        <<
                                         "\n";
                             }
                             break;
@@ -277,9 +277,8 @@ namespace YACCP {
             ValidatedCornersData validatedCornersData;
             if (valCornersQ_.try_dequeue(validatedCornersData)) {
                 // Update the validated counts.
-                // Only camera with index 0 should have the real data, the other ones should be 0.
-                validatedImagePairs += validatedCornersData.validatedImagePair;
-                validatedCorners += validatedCornersData.validatedCorners;
+                validatedImagePairs = validatedCornersData.validatedImagePair;
+                validatedCorners = validatedCornersData.validatedCorners;
 
                 auto correctedCorners = correctCoordinates(validatedCornersData);
                 pts.clear();

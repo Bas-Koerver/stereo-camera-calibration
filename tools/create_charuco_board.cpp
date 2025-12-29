@@ -96,7 +96,7 @@ int main(int argc, char** argv)
                  "Whether to generate an image of the generated board")->default_str("true");
     generateImage = !generateImage;
 
-    bool generateVideo{false};
+    bool generateVideo{true};
     app.add_flag("-v, --video", generateVideo,
                  "Whether to generate an event video of the generated board")->default_str("false");
 

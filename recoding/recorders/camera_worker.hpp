@@ -8,9 +8,13 @@
 #include <nlohmann/json_fwd.hpp>
 
 #include <opencv2/core/mat.hpp>
+#include <opencv2/objdetect/aruco_detector.hpp>
+#include <opencv2/objdetect/aruco_dictionary.hpp>
+#include <opencv2/objdetect/charuco_detector.hpp>
 
 
 namespace YACCP {
+    struct CamData;
     struct VerifyTask;
     /**
      * @brief Simple enum to represent different camera worker types.
@@ -19,56 +23,6 @@ namespace YACCP {
         prophesee,
         basler,
     };
-
-    /**
-     * @brief All data concerning a camera worker.
-     *
-     * @param isMaster Indicates if this camera is the master camera.
-     * @param isOpen Whenever the camera has been opened successfully.
-     * @param isRunning Whenever the camera is running.
-     * @param exitCode Exit code of the camera worker thread.
-     * @param camName A string representing the camera name for user feedback.
-     * @param width The width resolution of the camera.
-     * @param height The height resolution of the camera.
-     * @param frame The latest frame captured by the camera.
-     * @param m Mutex to protect access to the frame.
-     * @param frameRequestQ Queue to request a new frame from the slave cameras.
-     * @param frameVerifyQ Queue to send frames to the verification thread.
-     */
-    struct CamData {
-        // Thread information
-        bool isMaster;
-        bool isOpen{false};
-        bool isRunning{false};
-        int exitCode;
-        // Camera information
-        std::string camName;
-        int camId;
-        int width{};
-        int height{};
-        cv::Mat frame;
-        std::mutex m;
-        // Communication
-        moodycamel::ReaderWriterQueue<int> frameRequestQ{100};
-        moodycamel::BlockingReaderWriterQueue<VerifyTask> frameVerifyQ{100};
-        // Viewing details
-        int windowX;
-        int windowY;
-    };
-
-    inline void to_json(nlohmann::json &j, const CamData &camData) {
-        j =
-        {
-            {"isMaster", camData.isMaster},
-            {"camName", camData.camName},
-            {"width", camData.width},
-            {"height", camData.height},
-            {"windowX", camData.windowX},
-            {"windowY", camData.windowY},
-
-        };
-    }
-
 
     /**
      * @brief Parent class for camera workers.

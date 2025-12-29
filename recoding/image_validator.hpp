@@ -13,9 +13,11 @@ namespace YACCP {
                        int resolutionHeight,
                        const std::filesystem::path &dataPath);
 
-        void listJobs();
+        void listJobs() const;
 
         void validateImages(const std::string &jobName);
+
+        [[nodiscard]] static bool isNonEmptyDirectory(const std::filesystem::path &path);
 
     private:
         int resolutionWidth_;
@@ -28,7 +30,7 @@ namespace YACCP {
         void updateSubimages(Metavision::FrameComposer &frameComposer,
                              const std::vector<std::filesystem::path> &files,
                              const std::vector<std::filesystem::path> &cams,
-                             const std::vector<int> &camRefs);
+                             const std::vector<int> &camRefs) const;
     };
 } // YACCP
 

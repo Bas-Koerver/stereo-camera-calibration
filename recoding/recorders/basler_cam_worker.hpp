@@ -6,6 +6,8 @@
 
 
 namespace YACCP {
+    struct CamData;
+
     class BaslerCamWorker final : public CameraWorker {
     public:
         BaslerCamWorker(std::stop_source stopSource,

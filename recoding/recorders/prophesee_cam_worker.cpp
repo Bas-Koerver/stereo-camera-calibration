@@ -1,22 +1,22 @@
-#include <metavision/sdk/core/algorithms/polarity_filter_algorithm.h>
-#include <metavision/sdk/core/utils/cd_frame_generator.h>
-#include <metavision/sdk/core/algorithms/on_demand_frame_generation_algorithm.h>
-#include <metavision/sdk/stream/camera.h>
-
-#include <metavision/hal/facilities/i_hw_identification.h>
-#include <metavision/hal/facilities/i_trigger_in.h>
-#include <metavision/hal/facilities/i_ll_biases.h>
-
 #include "prophesee_cam_worker.hpp"
 
 #include <filesystem>
 #include <iostream>
 #include <string>
 
+#include <metavision/hal/facilities/i_hw_identification.h>
+#include <metavision/hal/facilities/i_ll_biases.h>
+#include <metavision/hal/facilities/i_trigger_in.h>
+#include <metavision/sdk/core/algorithms/on_demand_frame_generation_algorithm.h>
+#include <metavision/sdk/core/algorithms/polarity_filter_algorithm.h>
+#include <metavision/sdk/core/utils/cd_frame_generator.h>
+#include <metavision/sdk/stream/camera.h>
 
-#include "../utility.hpp"
 #include "camera_worker.hpp"
+
 #include "../detection_validator.hpp"
+#include "../job_data.hpp"
+#include "../utility.hpp"
 
 namespace YACCP {
     std::string sourceTypeToString(Metavision::OnlineSourceType type) {
@@ -58,7 +58,7 @@ namespace YACCP {
             for (const auto &kv: hw_id->get_system_info()) {
                 if (kv.first == "device0 name") {
                     std::cout << "Using Prophesee device: " << kv.second << '\n';
-                    camData.camName = kv.second;
+                    camData.info.camName = kv.second;
                 }
             }
         } else {
@@ -111,10 +111,10 @@ namespace YACCP {
             try {
                 // open the first available camera
                 cam = Metavision::Camera::from_first_available();
-                camData_.isOpen = true;
+                camData_.runtimeData.isOpen = true;
             } catch (Metavision::CameraException &e) {
                 std::cerr << e.what() << "\n";
-                camData_.exitCode = 2;
+                camData_.runtimeData.exitCode = 2;
                 stopSource_.request_stop();
                 return;
             }
@@ -122,10 +122,10 @@ namespace YACCP {
             try {
                 // open the first available camera
                 cam = Metavision::Camera::from_serial(camId_);
-                camData_.isOpen = true;
+                camData_.runtimeData.isOpen = true;
             } catch (Metavision::CameraException &e) {
                 std::cerr << e.what() << "\n";
-                camData_.exitCode = 2;
+                camData_.runtimeData.exitCode = 2;
                 stopSource_.request_stop();
                 return;
             }
@@ -133,7 +133,7 @@ namespace YACCP {
 
         printCurrentDevice(cam, camData_);
 
-        if (camData_.isOpen) {
+        if (camData_.runtimeData.isOpen) {
             // TODO: add biases file loading.
 
             // TODO: add runtime error handling
@@ -144,8 +144,8 @@ namespace YACCP {
             // Set polarity filter to only include events with a positive polarity.
             Metavision::PolarityFilterAlgorithm pol_filter{1};
             const auto &geometry = cam.geometry();
-            camData_.width = geometry.get_width();
-            camData_.height = geometry.get_height();
+            camData_.info.resolution.width = geometry.get_width();
+            camData_.info.resolution.height = geometry.get_height();
             bool requestNew{true};
 
             // Configure facilities like biases en timing interfaces.
@@ -174,7 +174,7 @@ namespace YACCP {
                 [this, &onDemandFrameGenerator, &requestNew](const Metavision::EventExtTrigger *begin,
                                                              const Metavision::EventExtTrigger *end) {
                     if (requestedFrame_ < 0) {
-                        (void) camData_.frameRequestQ.try_dequeue(requestedFrame_);
+                        (void) camData_.runtimeData.frameRequestQ.try_dequeue(requestedFrame_);
                     }
 
                     for (auto ev = begin; ev != end; ++ev) {
@@ -190,7 +190,7 @@ namespace YACCP {
                             VerifyTask task;
                             task.id = requestedFrame_;
                             onDemandFrameGenerator.generate(ev->t, task.frame);
-                            camData_.frameVerifyQ.enqueue(task);
+                            camData_.runtimeData.frameVerifyQ.enqueue(task);
 
                             requestedFrame_ = -1;
                         }
@@ -214,7 +214,7 @@ namespace YACCP {
             (void) cam.start();
             (void) cam.start_recording(outputPath_ / "event_file.raw");
 
-            camData_.isRunning = cam.is_running();
+            camData_.runtimeData.isRunning = cam.is_running();
             while (cam.is_running() && !stopToken_.stop_requested()) {
                 cv::Mat localFrame;
                 {
@@ -226,8 +226,8 @@ namespace YACCP {
                 }
                 // Frame used for visualisation
                 {
-                    std::unique_lock<std::mutex> lock{camData_.m};
-                    camData_.frame = localFrame.clone();
+                    std::unique_lock<std::mutex> lock{camData_.runtimeData.m};
+                    camData_.runtimeData.frame = localFrame.clone();
                 }
             }
 

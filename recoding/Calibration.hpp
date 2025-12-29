@@ -10,7 +10,7 @@ namespace YACCP {
                     const std::filesystem::path &dataPath,
                     float cornerMin);
 
-        void calibrate(const std::string &jobName);
+        void monoCalibrate(const std::string &jobName);
 
     private:
         const cv::aruco::CharucoDetector charucoDetector_;

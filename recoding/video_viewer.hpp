@@ -14,8 +14,8 @@ namespace YACCP {
         int camId;
         std::vector<int> charucoIds;
         std::vector<cv::Point2f> charucoCorners;
-        int validatedImagePair = 0;
-        int validatedCorners = 0;
+        int validatedImagePair;
+        int validatedCorners;
     };
 
     class VideoViewer {

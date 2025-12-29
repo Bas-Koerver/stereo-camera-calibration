@@ -7,6 +7,7 @@
 
 #include "utility.hpp"
 #include "video_viewer.hpp"
+#include "job_data.hpp"
 
 #include "recorders/camera_worker.hpp"
 
@@ -30,6 +31,9 @@ namespace YACCP {
         std::vector<VerifyTask> verifyTasks(camDatas_.size());
         std::vector<std::vector<cv::Point2f> > allCharucoCorners(camDatas_.size());
         cv::Size boardSize = charucoDetector_.getBoard().getChessboardSize();
+        int validatedImagePair{};
+        int validatedCorners{};
+
 
         int cornerAmount = (boardSize.width - 1) * (boardSize.height - 1);
 
@@ -45,7 +49,7 @@ namespace YACCP {
                     if (std::find(camTaskCorrect.begin(), camTaskCorrect.end(), i) != camTaskCorrect.end()) continue;
 
                     while (!stopToken_.stop_requested() &&
-                           !camDatas_[i].frameVerifyQ.wait_dequeue_timed(verifyTasks[i],
+                           !camDatas_[i].runtimeData.frameVerifyQ.wait_dequeue_timed(verifyTasks[i],
                                                                          std::chrono::milliseconds(100)));
                 }
 
@@ -75,8 +79,10 @@ namespace YACCP {
 
             cv::Mat grayFrame;
             cv::cvtColor(verifyTasks[0].frame, grayFrame, cv::COLOR_BGR2GRAY);
-            CharucoResults charucoResults = Utility::findBoard(charucoDetector_, grayFrame, std::floor(
-                                                                   static_cast<float>(cornerAmount) * cornerMin_));
+            CharucoResults charucoResults{
+                Utility::findBoard(charucoDetector_, grayFrame, std::floor(
+                                       static_cast<float>(cornerAmount) * cornerMin_))
+            };
             if (!charucoResults.boardFound) continue;
 
             allCharucoCorners[0] = charucoResults.charucoCorners;
@@ -114,6 +120,9 @@ namespace YACCP {
                 continue;
             }
 
+            validatedImagePair += 1;
+            validatedCorners += static_cast<int>(vec1.size());
+
             for (auto i{0}; i < camDatas_.size(); ++i) {
                 // Save image.
                 // TODO: Make path configurable.
@@ -127,15 +136,12 @@ namespace YACCP {
                 // Enqueue bounding box data for viewing.
                 ValidatedCornersData validatedCornersData;
 
-                if (i == 0) {
-                    validatedCornersData.validatedImagePair = 1;
-                    validatedCornersData.validatedCorners = static_cast<int>(vec1.size());
-                }
-
                 validatedCornersData.id = verifyTasks[i].id;
                 validatedCornersData.camId = i;
                 validatedCornersData.charucoIds = vec1;
                 validatedCornersData.charucoCorners = allCharucoCorners[i];
+                validatedCornersData.validatedImagePair = validatedImagePair;
+                validatedCornersData.validatedCorners = validatedCorners;
                 (void) valCornersQ_.enqueue(validatedCornersData);
             }
         }

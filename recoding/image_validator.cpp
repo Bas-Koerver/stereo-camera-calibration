@@ -6,7 +6,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <signal.h>
 
 #include <metavision/sdk/core/utils/frame_composer.h>
 #include <metavision/sdk/ui/utils/event_loop.h>
@@ -16,10 +15,16 @@
 #include <nlohmann/json_fwd.hpp>
 
 namespace YACCP {
+    bool ImageValidator::isNonEmptyDirectory(const std::filesystem::path &path) {
+        return std::filesystem::exists(path) &&
+               std::filesystem::is_directory(path) &&
+               !std::filesystem::is_empty(path);
+    }
+
     void ImageValidator::updateSubimages(Metavision::FrameComposer &frameComposer,
                                          const std::vector<std::filesystem::path> &files,
                                          const std::vector<std::filesystem::path> &cams,
-                                         const std::vector<int> &camRefs) {
+                                         const std::vector<int> &camRefs) const {
         for (auto i{0}; i < cams.size(); ++i) {
             frameComposer.update_subimage(
                 camRefs[i],
@@ -36,11 +41,33 @@ namespace YACCP {
           dataPath_(dataPath) {
     }
 
-    void ImageValidator::listJobs() {
+    void ImageValidator::listJobs() const {
         std::cout << "Available jobs to validate: \n";
         for (auto const &entry: std::filesystem::directory_iterator(dataPath_)) {
             if (!entry.is_directory()) continue;
-            std::cout << entry.path().filename() << "\n";
+
+            std::filesystem::path rawPath = entry.path() / "images" / "raw";
+            std::filesystem::path verifiedPath = entry.path() / "images" / "verified";
+
+            // Are there files in the verified folder?
+            if (isNonEmptyDirectory(verifiedPath)) continue;
+
+            // Are there no files in the raw folder?
+            if (!isNonEmptyDirectory(rawPath)) continue;
+
+            std::cout << "  " << entry.path().filename() << "\n";
+        }
+
+        std::cout << "Jobs already validated: \n";
+        for (auto const &entry: std::filesystem::directory_iterator(dataPath_)) {
+            if (!entry.is_directory()) continue;
+
+            std::filesystem::path verifiedPath = entry.path() / "images" / "verified";
+
+            // Are there already files in the verified folder?
+            if (!isNonEmptyDirectory(verifiedPath)) continue;
+
+            std::cout << "  " << entry.path().filename() << "\n";
         }
     }
 
@@ -51,40 +78,61 @@ namespace YACCP {
             return;
         }
 
+        if (!ImageValidator::isNonEmptyDirectory(jobPath_ / "images" / "raw")) {
+            std::cerr << "No raw images found for job: " << jobName << "\n";
+            return;
+        }
+
         std::vector<std::filesystem::path> cams;
-        std::vector<std::filesystem::path> files;
+        std::vector<std::filesystem::path> images;
         std::vector<int> camRefs;
 
-        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images/raw")) {
+        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "raw")) {
             if (!entry.is_directory()) continue;
             cams.push_back(entry.path().filename());
         }
-        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images/raw" / cams[0])) {
+        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "raw" / cams[0])) {
             if (!entry.is_regular_file()) continue;
-            files.push_back(entry.path().filename());
+            images.push_back(entry.path().filename());
         }
 
-        if (!exists(jobPath_ / "camera_data.json")) {
+        std::ranges::sort(images);
+
+        if (!exists(jobPath_ / "job_data.json")) {
             std::cerr << "No camera data was found.\n Stopping! \n";
             return;
         }
 
-        std::ifstream file{jobPath_ / "camera_data.json"};
-        nlohmann::json jsonObj{nlohmann::json::parse(file)};
+        std::ifstream file{jobPath_ / "job_data.json"};
+        if (!file) {
+            std::cerr << "Camera data exists but cannot be opened.\nStopping!\n";
+            return;
+        }
+        nlohmann::json j{nlohmann::json::parse(file)};
 
         Metavision::FrameComposer frameComposer;
-        for (auto i{0}; i < cams.size(); ++i) {
-            camRefs.emplace_back(
-                frameComposer.add_new_subimage_parameters(
-                    jsonObj["cam_" + std::to_string(i)]["windowX"],
-                    jsonObj["cam_" + std::to_string(i)]["windowY"],
-                    {
-                        jsonObj["cam_" + std::to_string(i)]["width"],
-                        jsonObj["cam_" + std::to_string(i)]["height"]
-                    },
-                    Metavision::FrameComposer::GrayToColorOptions()
-                )
-            );
+        try {
+            for (const auto &cam: cams) {
+                const auto &camj = j.at("cams").at(cam.string());
+                const auto &view = camj.at("view");
+                const auto &resolution = camj.at("resolution");
+
+                const int topLeftX = view.at("windowX").get<int>();
+                const int topLeftY = view.at("windowY").get<int>();
+                const unsigned width = resolution.at("width").get<unsigned>();
+                const unsigned height = resolution.at("height").get<unsigned>();
+                camRefs.emplace_back(
+                    frameComposer.add_new_subimage_parameters(topLeftX,
+                                                              topLeftY,
+                                                              {width, height},
+                                                              Metavision::FrameComposer::GrayToColorOptions()
+                    )
+                );
+            }
+        } catch (std::exception &e) {
+            std::cerr << "Exception: " << e.what() << "\n";
+            std::cerr << "The job_data.json has the wrong format";
+            return;
         }
 
         double scaleX{static_cast<double>(resolutionWidth_) / frameComposer.get_total_width()};
@@ -106,11 +154,11 @@ namespace YACCP {
                     &window,
                     &cams,
                     &frameComposer,
-                    &files,
+                    &images,
                     &camRefs](Metavision::UIKeyEvent key,
-                                       int scancode,
-                                       Metavision::UIAction action,
-                                       int mods) {
+                              int scancode,
+                              Metavision::UIAction action,
+                              int mods) {
                     if (action == Metavision::UIAction::RELEASE) {
                         switch (key) {
                             case Metavision::UIKeyEvent::KEY_ESCAPE:
@@ -119,7 +167,8 @@ namespace YACCP {
                                 break;
                             case Metavision::UIKeyEvent::KEY_D:
                                 // Toggle whether an image should be marked as valid or not.
-                                if (std::ranges::find(indexesToDiscard_, currentFileIndex_) != indexesToDiscard_.end()) {
+                                if (std::ranges::find(indexesToDiscard_, currentFileIndex_) != indexesToDiscard_.
+                                    end()) {
                                     std::erase(indexesToDiscard_, currentFileIndex_);
                                 } else {
                                     indexesToDiscard_.emplace_back(currentFileIndex_);
@@ -128,15 +177,15 @@ namespace YACCP {
                             case Metavision::UIKeyEvent::KEY_LEFT:
                                 if (currentFileIndex_ <= 0) {
                                     std::cout << "Reached the beginning of the image set.\n Looping to end.\n\n";
-                                    currentFileIndex_ = files.size() - 1;
+                                    currentFileIndex_ = images.size() - 1;
                                 } else {
                                     currentFileIndex_--;
                                 }
                                 // Go to previous image.
-                                updateSubimages(frameComposer, files, cams, camRefs);
+                                updateSubimages(frameComposer, images, cams, camRefs);
                                 break;
                             case Metavision::UIKeyEvent::KEY_RIGHT:
-                                if (currentFileIndex_ >= files.size() - 1) {
+                                if (currentFileIndex_ >= images.size() - 1) {
                                     std::cout << "Reached the end of the image set.\n Looping back to start.\n\n";
                                     currentFileIndex_ = 0;
                                 } else {
@@ -144,14 +193,14 @@ namespace YACCP {
                                 }
 
                                 // Go to next image.
-                                updateSubimages(frameComposer, files, cams, camRefs);
+                                updateSubimages(frameComposer, images, cams, camRefs);
                                 break;
                         }
                     }
                 }
             );
 
-            updateSubimages(frameComposer, files, cams, camRefs);
+            updateSubimages(frameComposer, images, cams, camRefs);
 
             while (!window.should_close()) {
                 cv::Mat frame{frameComposer.get_full_image()};
@@ -169,7 +218,7 @@ namespace YACCP {
                 }
 
                 cv::putText(display,
-                            files[currentFileIndex_].filename().string(),
+                            images[currentFileIndex_].filename().string(),
                             cv::Point(10, height - 60),
                             cv::FONT_HERSHEY_SIMPLEX,
                             0.8,
@@ -181,7 +230,7 @@ namespace YACCP {
             }
         }
 
-        if (std::filesystem::exists(jobPath_ / "images/verified")) {
+        if (isNonEmptyDirectory(jobPath_ / "images" / "verified")) {
             std::cout << "Verified directory already present, do you want to overwrite it? (y/n): ";
             char response;
             bool keepAsking{true};
@@ -198,7 +247,7 @@ namespace YACCP {
             }
 
             if (response == 'y') {
-                std::filesystem::remove_all(jobPath_ / "images/verified");
+                std::filesystem::remove_all(jobPath_ / "images" / "verified");
             } else {
                 std::cout << "Aborting verification process to avoid overwriting existing data.\n";
                 return;
@@ -208,11 +257,11 @@ namespace YACCP {
         std::filesystem::create_directories(jobPath_ / "images/verified");
 
         for (auto i{0}; i < cams.size(); ++i) {
-            std::filesystem::create_directories(jobPath_ / "images/verified" / cams[i]);
+            std::filesystem::create_directories(jobPath_ / "images" / "verified" / cams[i]);
         }
 
         // Copy the remaining images to the verified folder.
-        for (auto i{0}; i < files.size(); ++i) {
+        for (auto i{0}; i < images.size(); ++i) {
             if (std::ranges::find(indexesToDiscard_, i) != indexesToDiscard_.end()) {
                 continue;
             }
@@ -220,8 +269,8 @@ namespace YACCP {
             // TODO: Change to direct vector indexing.
             for (auto j{0}; j < cams.size(); ++j) {
                 try {
-                    std::filesystem::copy(jobPath_ / "images/raw" / cams[j] / files[i],
-                                          jobPath_ / "images/verified" / cams[j] / files[i]
+                    std::filesystem::copy(jobPath_ / "images" / "raw" / cams[j] / images[i],
+                                          jobPath_ / "images" / "verified" / cams[j] / images[i]
                     );
                 } catch (const std::filesystem::filesystem_error &e) {
                     std::cerr << e.what() << "\n";

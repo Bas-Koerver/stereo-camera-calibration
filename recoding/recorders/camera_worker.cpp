@@ -3,6 +3,7 @@
 //
 
 #include "camera_worker.hpp"
+#include "../job_data.hpp"
 
 #include <iostream>
 #include <stop_token>

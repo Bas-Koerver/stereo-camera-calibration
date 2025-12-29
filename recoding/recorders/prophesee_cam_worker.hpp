@@ -4,6 +4,8 @@
 
 
 namespace YACCP {
+    struct CamData;
+
     class PropheseeCamWorker final : public CameraWorker {
     public:
         PropheseeCamWorker(std::stop_source stopSource,

@@ -1,4 +1,6 @@
+#define NOMINMAX
 #include <csignal>
+#include <fstream>
 #include <map>
 
 #include "detection_validator.hpp"
@@ -12,13 +14,14 @@
 #include <GLFW/glfw3.h>
 
 #include "Calibration.hpp"
+#include "job_data.hpp"
 #include "image_validator.hpp"
 
 int getWorstStopCode(const std::vector<YACCP::CamData> &camDatas) {
     int stopCode = 0;
     for (auto &camData: camDatas) {
-        if (camData.exitCode > stopCode) {
-            stopCode = camData.exitCode;
+        if (camData.runtimeData.exitCode > stopCode) {
+            stopCode = camData.runtimeData.exitCode;
         }
     }
 
@@ -40,6 +43,7 @@ int main() {
     YACCP::WorkerTypes masterWorker;
     slaveWorkers = {YACCP::WorkerTypes::prophesee};
     masterWorker = YACCP::WorkerTypes::basler;
+    std::vector camPlacement{0, 1};
     auto squaresX{7};
     auto squaresY{5};
     float squareLength{0.0295};
@@ -49,6 +53,8 @@ int main() {
     auto acc{33333};
     auto viewsHorizontal{3};
     float cornerMin{.25F};
+    // cv::aruco::DICT_6X6_50
+    int dictId{8};
     std::filesystem::path userPath{""};
 
     // Current working directory.
@@ -59,8 +65,8 @@ int main() {
     std::vector<std::jthread> threads;
     std::vector<std::unique_ptr<YACCP::CameraWorker> > cameraWorkers;
     moodycamel::ReaderWriterQueue<YACCP::ValidatedCornersData> valCornersQ{100};
-    cv::aruco::DetectorParameters detParams;
     cv::aruco::CharucoParameters charucoParams;
+    cv::aruco::DetectorParameters detParams;
     std::map<std::string, YACCP::WorkerTypes>{
         {"PropheseeDVS", YACCP::WorkerTypes::prophesee},
         {"BaslerRGB", YACCP::WorkerTypes::basler},
@@ -77,23 +83,21 @@ int main() {
     std::filesystem::path path = workingDir / userPath / "data";
     std::filesystem::path outputPath = path / ("job_" + dateTime.str() + "/");
 
-    cv::aruco::Dictionary dictionary{cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_50)};
+    cv::aruco::Dictionary dictionary{cv::aruco::getPredefinedDictionary(dictId)};
     cv::aruco::CharucoBoard board{cv::Size(squaresX, squaresY), squareLength, markerLength, dictionary};
     cv::aruco::CharucoDetector charucoDetector(board, charucoParams, detParams);
-
 
     YACCP::ImageValidator imageValidator(mode->width - 100,
                                          mode->height - 100,
                                          path);
     imageValidator.listJobs();
     // imageValidator.validateImages(
-    //     "job_2025-12-21_14-56-20"
+    //     "job_2025-12-28_18-54-04"
     // );
-
 
     YACCP::Calibration calibration(charucoDetector, path, cornerMin);
 
-    calibration.calibrate("job_2025-12-21_14-56-20");
+    calibration.monoCalibrate("job_2025-12-28_18-54-04");
 
     return 0;
 
@@ -101,8 +105,8 @@ int main() {
     // (void) std::filesystem::create_directories(outputPath / "images/verified");
 
     for (int i = 0; i < numCams - 1; ++i) {
-        camDatas[i].isMaster = false;
-        camDatas[i].camId = i;
+        camDatas[i].info.isMaster = false;
+        camDatas[i].info.camId = i;
 
         switch (slaveWorkers[i]) {
             case YACCP::WorkerTypes::prophesee:
@@ -131,7 +135,7 @@ int main() {
         auto *worker = cameraWorkers.back().get();
         threads.emplace_back([worker] { worker->start(); });
 
-        while (!camDatas[i].isRunning) {
+        while (!camDatas[i].runtimeData.isRunning) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             if (stopSource.stop_requested()) {
                 return getWorstStopCode(camDatas);
@@ -139,8 +143,8 @@ int main() {
         }
     }
 
-    camDatas.back().isMaster = true;
-    camDatas.back().camId = camDatas.size() - 1;
+    camDatas.back().info.isMaster = true;
+    camDatas.back().info.camId = camDatas.size() - 1;
     switch (masterWorker) {
         case YACCP::WorkerTypes::prophesee:
             cameraWorkers.emplace_back(std::make_unique<YACCP::PropheseeCamWorker>(
@@ -169,7 +173,7 @@ int main() {
     threads.emplace_back([worker] { worker->start(); });
 
     // Start the viewing thread.
-    while (!camDatas.back().isRunning) {
+    while (!camDatas.back().runtimeData.isRunning) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         if (stopSource.stop_requested()) {
             return getWorstStopCode(camDatas);
@@ -202,6 +206,29 @@ int main() {
     for (auto &thread: threads) {
         thread.join();
     }
+
+    // Create json object with camera data.
+    std::cout << "Creating job_data.json";
+    YACCP::CharucoConfig charucoConfig;
+    charucoConfig.openCvDictionaryId = dictId;
+    charucoConfig.boardSize = cv::Size(squaresX, squaresY);
+    charucoConfig.squareLength = squareLength;
+    charucoConfig.markerLength = markerLength;
+    charucoConfig.charucoParams = charucoParams;
+    charucoConfig.detParams = detParams;
+    nlohmann::json j;
+    j["openCv"] = CV_VERSION;
+    j["camPlacement"] = camPlacement;
+    j["charuco"] = charucoConfig;
+    j["cams"] = nlohmann::json::object();
+
+    for (auto i{0}; i < camDatas.size(); ++i) {
+        j["cams"]["cam_" + std::to_string(i)] = camDatas[i].info;
+    }
+
+    // Save json to file.
+    std::ofstream file(outputPath / "job_data.json");
+    file << j.dump(4);
 
     return 0;
 }
