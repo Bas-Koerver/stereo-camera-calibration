@@ -1,5 +1,5 @@
-#ifndef STEREO_CAMERA_CALIBRATION_PROPHESEE_DVS_RECORDER_H
-#define STEREO_CAMERA_CALIBRATION_PROPHESEE_DVS_RECORDER_H
+#ifndef YACCP_RECORDING_RECORDERS_PROPHESEE_CAM_WORKER_HPP
+#define YACCP_RECORDING_RECORDERS_PROPHESEE_CAM_WORKER_HPP
 #include "camera_worker.hpp"
 
 
@@ -12,7 +12,7 @@ namespace YACCP {
                            std::vector<CamData> &camDatas,
                            int fps,
                            int id,
-                           int accumulation_time,
+                           int accumulationTime,
                            int fallingEdgePolarity,
                            const std::filesystem::path &outputPath,
                            std::string camId = {});
@@ -28,4 +28,4 @@ namespace YACCP {
         int fallingEdgePolarity_{};
     };
 } // YACCP
-#endif //STEREO_CAMERA_CALIBRATION_PROPHESEE_DVS_RECORDER_H
+#endif //YACCP_RECORDING_RECORDERS_PROPHESEE_CAM_WORKER_HPP

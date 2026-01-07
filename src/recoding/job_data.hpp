@@ -1,5 +1,5 @@
-#ifndef STEREO_CAMERA_CALIBRATION_CAM_DATA_HPP
-#define STEREO_CAMERA_CALIBRATION_CAM_DATA_HPP
+#ifndef YACCP_RECORDING_JOB_DATA_HPP
+#define YACCP_RECORDING_JOB_DATA_HPP
 #include <readerwriterqueue.h>
 
 #include <nlohmann/json_fwd.hpp>
@@ -11,19 +11,19 @@
 #include "detection_validator.hpp"
 
 namespace cv::aruco {
-    inline void to_json(nlohmann::json &j, const CharucoParameters &p) {
+    inline void to_json(nlohmann::json& j, const CharucoParameters& p) {
         j = {
             {"minMarkers", p.minMarkers},
             {"tryRefineMarkers", p.tryRefineMarkers}
         };
     }
 
-    inline void from_json(const nlohmann::json &j, CharucoParameters &p) {
+    inline void from_json(const nlohmann::json& j, CharucoParameters& p) {
         j.at("minMarkers").get_to(p.minMarkers);
         j.at("tryRefineMarkers").get_to(p.tryRefineMarkers);
     }
 
-    inline void to_json(nlohmann::json &j, const DetectorParameters &p) {
+    inline void to_json(nlohmann::json& j, const DetectorParameters& p) {
         j = {
             {"adaptiveThreshWinSizeMin", p.adaptiveThreshWinSizeMin},
             {"adaptiveThreshWinSizeMax", p.adaptiveThreshWinSizeMax},
@@ -60,7 +60,7 @@ namespace cv::aruco {
         };
     }
 
-    inline void from_json(const nlohmann::json &j, DetectorParameters &p) {
+    inline void from_json(const nlohmann::json& j, DetectorParameters& p) {
         j.at("adaptiveThreshWinSizeMin").get_to(p.adaptiveThreshWinSizeMin);
         j.at("adaptiveThreshWinSizeMax").get_to(p.adaptiveThreshWinSizeMax);
         j.at("adaptiveThreshWinSizeStep").get_to(p.adaptiveThreshWinSizeStep);
@@ -98,7 +98,7 @@ namespace cv::aruco {
 
 
 namespace YACCP {
-    static nlohmann::json matTo2dArray(const cv::Mat &m) {
+    static nlohmann::json matTo2dArray(const cv::Mat& m) {
         CV_Assert(m.type() == CV_64F);
 
         nlohmann::json out{nlohmann::json::array()};
@@ -112,7 +112,7 @@ namespace YACCP {
         return out;
     }
 
-    static cv::Mat matFrom2dArray(const nlohmann::json &j) {
+    static cv::Mat matFrom2dArray(const nlohmann::json& j) {
         if (j.is_null()) return cv::Mat();
         if (!j.is_array() || j.empty()) return cv::Mat();
 
@@ -122,7 +122,7 @@ namespace YACCP {
         cv::Mat m(rows, cols, CV_64F);
 
         for (auto r{0}; r < rows; ++r) {
-            const auto &row = j.at(r);
+            const auto& row = j.at(r);
             for (auto c{0}; c < cols; ++c) {
                 m.at<double>(r, c) = row.at(c).get<double>();
             }
@@ -132,7 +132,7 @@ namespace YACCP {
     }
 
     // TODO: check if it's better to keep row column vector formatting.
-    static nlohmann::json matTo1dArray(const cv::Mat &m) {
+    static nlohmann::json matTo1dArray(const cv::Mat& m) {
         CV_Assert(m.type() == CV_64F);
         CV_Assert(m.rows == 1 || m.cols == 1);
 
@@ -147,7 +147,7 @@ namespace YACCP {
         return out;
     }
 
-    static cv::Mat matFrom1dArray(const nlohmann::json &j) {
+    static cv::Mat matFrom1dArray(const nlohmann::json& j) {
         if (j.is_null()) return cv::Mat();
         if (!j.is_array()) return cv::Mat();
 
@@ -162,7 +162,7 @@ namespace YACCP {
         return m;
     }
 
-    static nlohmann::json vec3ToArray(const cv::Mat &v) {
+    static nlohmann::json vec3ToArray(const cv::Mat& v) {
         CV_Assert(v.type() == CV_64F);
         CV_Assert((v.rows == 3 && v.cols == 1) || (v.rows == 1 && v.cols == 3));
 
@@ -173,7 +173,7 @@ namespace YACCP {
         });
     }
 
-    static cv::Mat vec3FromArray(const nlohmann::json &j) {
+    static cv::Mat vec3FromArray(const nlohmann::json& j) {
         if (j.is_null()) return cv::Mat();
         if (!j.is_array() || j.size() != 3) return cv::Mat();
 
@@ -190,6 +190,7 @@ namespace YACCP {
         cv::Size boardSize;
         float squareLength;
         float markerLength;
+        float cornerMin;
         cv::aruco::CharucoParameters charucoParams;
         cv::aruco::DetectorParameters detParams;
     };
@@ -255,7 +256,7 @@ namespace YACCP {
         RuntimeData runtimeData;
     };
 
-    inline void to_json(nlohmann::json &j, const CharucoConfig &c) {
+    inline void to_json(nlohmann::json& j, const CharucoConfig& c) {
         j = {
             {
                 "boardSize",
@@ -272,7 +273,7 @@ namespace YACCP {
         };
     }
 
-    inline void from_json(const nlohmann::json &j, CharucoConfig &c) {
+    inline void from_json(const nlohmann::json& j, CharucoConfig& c) {
         j.at("boardSize").at("width").get_to(c.boardSize.width);
         j.at("boardSize").at("height").get_to(c.boardSize.height);
         j.at("squareLength").get_to(c.squareLength);
@@ -282,19 +283,19 @@ namespace YACCP {
         j.at("detectorParams").get_to(c.detParams);
     }
 
-    inline void to_json(nlohmann::json &j, const CamData::ViewData &v) {
+    inline void to_json(nlohmann::json& j, const CamData::ViewData& v) {
         j = {
             {"windowX", v.windowX},
             {"windowY", v.windowY}
         };
     }
 
-    inline void from_json(const nlohmann::json &j, CamData::ViewData &v) {
+    inline void from_json(const nlohmann::json& j, CamData::ViewData& v) {
         j.at("windowX").get_to(v.windowX);
         j.at("windowY").get_to(v.windowY);
     }
 
-    inline void to_json(nlohmann::json &j, const CamData::CalibData &c) {
+    inline void to_json(nlohmann::json& j, const CamData::CalibData& c) {
         if (!c.cameraMatrix.empty()) {
             j = {
                 {"reprojError", c.reprojError},
@@ -311,16 +312,16 @@ namespace YACCP {
         }
     }
 
-    inline void from_json(const nlohmann::json &j, CamData::CalibData &c) {
+    inline void from_json(const nlohmann::json& j, CamData::CalibData& c) {
         j.at("reprojError").get_to(c.reprojError);
         c.cameraMatrix = matFrom2dArray(j.at("cameraMatrix"));
         c.distCoeffs = matFrom1dArray(j.at("distCoeffs"));
 
-        for (const auto &rv : j.at("rvecs")) c.rvecs.emplace_back(vec3FromArray(rv));
-        for (const auto &tv : j.at("tvecs")) c.tvecs.emplace_back(vec3FromArray(tv));
+        for (const auto& rv : j.at("rvecs")) c.rvecs.emplace_back(vec3FromArray(rv));
+        for (const auto& tv : j.at("tvecs")) c.tvecs.emplace_back(vec3FromArray(tv));
     }
 
-    inline void to_json(nlohmann::json &j, const CamData::Info &i) {
+    inline void to_json(nlohmann::json& j, const CamData::Info& i) {
         j = {
             {"camName", i.camName},
             {"camId", i.camId},
@@ -337,7 +338,7 @@ namespace YACCP {
         };
     }
 
-    inline void from_json(const nlohmann::json &j, CamData::Info &i) {
+    inline void from_json(const nlohmann::json& j, CamData::Info& i) {
         j.at("camName").get_to(i.camName);
         j.at("camId").get_to(i.camId);
         j.at("resolution").at("width").get_to(i.resolution.width);
@@ -347,14 +348,14 @@ namespace YACCP {
         if (j.contains("calibration") && !j.at("calibration").is_null()) j.at("calibration").get_to(i.calibData);
     }
 
-    inline void to_json(nlohmann::json &j, const CamData &c) {
+    inline void to_json(nlohmann::json& j, const CamData& c) {
         j = c.info;
         // runtimeData intentionally excluded
     }
 
-    inline void from_json(const nlohmann::json &j, CamData &c) {
+    inline void from_json(const nlohmann::json& j, CamData& c) {
         j.at("info").get_to(c.info);
     }
 }
 
-#endif //STEREO_CAMERA_CALIBRATION_CAM_DATA_HPP
+#endif //YACCP_RECORDING_JOB_DATA_HPP

@@ -1,5 +1,5 @@
-#ifndef STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
-#define STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
+#ifndef YACCP_RECORDING_VIDEO_VIEWER_HPP
+#define YACCP_RECORDING_VIDEO_VIEWER_HPP
 #include <stop_token>
 #include <vector>
 #include <opencv2/objdetect/charuco_detector.hpp>
@@ -55,4 +55,4 @@ namespace YACCP {
     };
 } // YACCP
 
-#endif //STEREO_CAMERA_CALIBRATION_VIDEO_VIEWER_H
+#endif //YACCP_RECORDING_VIDEO_VIEWER_HPP

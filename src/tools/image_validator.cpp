@@ -15,16 +15,16 @@
 #include <nlohmann/json_fwd.hpp>
 
 namespace YACCP {
-    bool ImageValidator::isNonEmptyDirectory(const std::filesystem::path &path) {
+    bool ImageValidator::isNonEmptyDirectory(const std::filesystem::path& path) {
         return std::filesystem::exists(path) &&
-               std::filesystem::is_directory(path) &&
-               !std::filesystem::is_empty(path);
+            std::filesystem::is_directory(path) &&
+            !std::filesystem::is_empty(path);
     }
 
-    void ImageValidator::updateSubimages(Metavision::FrameComposer &frameComposer,
-                                         const std::vector<std::filesystem::path> &files,
-                                         const std::vector<std::filesystem::path> &cams,
-                                         const std::vector<int> &camRefs) const {
+    void ImageValidator::updateSubimages(Metavision::FrameComposer& frameComposer,
+                                         const std::vector<std::filesystem::path>& files,
+                                         const std::vector<std::filesystem::path>& cams,
+                                         const std::vector<int>& camRefs) const {
         for (auto i{0}; i < cams.size(); ++i) {
             frameComposer.update_subimage(
                 camRefs[i],
@@ -33,17 +33,9 @@ namespace YACCP {
         }
     }
 
-    ImageValidator::ImageValidator(int resolutionWidth,
-                                   int resolutionHeight,
-                                   const std::filesystem::path &dataPath)
-        : resolutionWidth_(resolutionWidth),
-          resolutionHeight_(resolutionHeight),
-          dataPath_(dataPath) {
-    }
-
-    void ImageValidator::listJobs() const {
+    void ImageValidator::listJobs(const std::filesystem::path& dataPath) {
         std::cout << "Available jobs to validate: \n";
-        for (auto const &entry: std::filesystem::directory_iterator(dataPath_)) {
+        for (auto const& entry : std::filesystem::directory_iterator(dataPath)) {
             if (!entry.is_directory()) continue;
 
             std::filesystem::path rawPath = entry.path() / "images" / "raw";
@@ -59,7 +51,7 @@ namespace YACCP {
         }
 
         std::cout << "Jobs already validated: \n";
-        for (auto const &entry: std::filesystem::directory_iterator(dataPath_)) {
+        for (auto const& entry : std::filesystem::directory_iterator(dataPath)) {
             if (!entry.is_directory()) continue;
 
             std::filesystem::path verifiedPath = entry.path() / "images" / "verified";
@@ -71,10 +63,13 @@ namespace YACCP {
         }
     }
 
-    void ImageValidator::validateImages(const std::string &jobName) {
-        jobPath_ = dataPath_ / jobName;
+    void ImageValidator::validateImages(int resolutionWidth,
+                                        int resolutionHeight,
+                                        const std::filesystem::path& dataPath,
+                                        const std::string& jobName) {
+        jobPath_ = dataPath / jobName;
         if (!exists(jobPath_)) {
-            std::cerr << "Job: " << jobName << " does not exist in the given path: " << dataPath_ << "\n";
+            std::cerr << "Job: " << jobName << " does not exist in the given path: " << dataPath << "\n";
             return;
         }
 
@@ -87,11 +82,11 @@ namespace YACCP {
         std::vector<std::filesystem::path> images;
         std::vector<int> camRefs;
 
-        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "raw")) {
+        for (auto const& entry : std::filesystem::directory_iterator(jobPath_ / "images" / "raw")) {
             if (!entry.is_directory()) continue;
             cams.push_back(entry.path().filename());
         }
-        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "raw" / cams[0])) {
+        for (auto const& entry : std::filesystem::directory_iterator(jobPath_ / "images" / "raw" / cams[0])) {
             if (!entry.is_regular_file()) continue;
             images.push_back(entry.path().filename());
         }
@@ -112,10 +107,10 @@ namespace YACCP {
 
         Metavision::FrameComposer frameComposer;
         try {
-            for (const auto &cam: cams) {
-                const auto &camj = j.at("cams").at(cam.string());
-                const auto &view = camj.at("view");
-                const auto &resolution = camj.at("resolution");
+            for (const auto& cam : cams) {
+                const auto& camj = j.at("cams").at(cam.string());
+                const auto& view = camj.at("view");
+                const auto& resolution = camj.at("resolution");
 
                 const int topLeftX = view.at("windowX").get<int>();
                 const int topLeftY = view.at("windowY").get<int>();
@@ -129,14 +124,14 @@ namespace YACCP {
                     )
                 );
             }
-        } catch (std::exception &e) {
+        } catch (std::exception& e) {
             std::cerr << "Exception: " << e.what() << "\n";
             std::cerr << "The job_data.json has the wrong format";
             return;
         }
 
-        double scaleX{static_cast<double>(resolutionWidth_) / frameComposer.get_total_width()};
-        double scaleY{static_cast<double>(resolutionHeight_) / frameComposer.get_total_height()};
+        double scaleX{static_cast<double>(resolutionWidth) / frameComposer.get_total_width()};
+        double scaleY{static_cast<double>(resolutionHeight) / frameComposer.get_total_height()};
         double scale{std::min(scaleX, scaleY)};
 
         int width{(frameComposer.get_total_width())};
@@ -146,7 +141,9 @@ namespace YACCP {
         // Close the window when receiving a should close flag.
         {
             cv::Scalar textColour;
-            Metavision::Window window("Validating recorded detections", width * scale, height * scale,
+            Metavision::Window window("Validating recorded detections",
+                                      width * scale,
+                                      height * scale,
                                       Metavision::Window::RenderMode::BGR);
 
             window.set_keyboard_callback(
@@ -161,40 +158,40 @@ namespace YACCP {
                               int mods) {
                     if (action == Metavision::UIAction::RELEASE) {
                         switch (key) {
-                            case Metavision::UIKeyEvent::KEY_ESCAPE:
-                            case Metavision::UIKeyEvent::KEY_Q:
-                                window.set_close_flag();
-                                break;
-                            case Metavision::UIKeyEvent::KEY_D:
-                                // Toggle whether an image should be marked as valid or not.
-                                if (std::ranges::find(indexesToDiscard_, currentFileIndex_) != indexesToDiscard_.
-                                    end()) {
-                                    std::erase(indexesToDiscard_, currentFileIndex_);
-                                } else {
-                                    indexesToDiscard_.emplace_back(currentFileIndex_);
-                                }
-                                break;
-                            case Metavision::UIKeyEvent::KEY_LEFT:
-                                if (currentFileIndex_ <= 0) {
-                                    std::cout << "Reached the beginning of the image set.\n Looping to end.\n\n";
-                                    currentFileIndex_ = images.size() - 1;
-                                } else {
-                                    currentFileIndex_--;
-                                }
-                                // Go to previous image.
-                                updateSubimages(frameComposer, images, cams, camRefs);
-                                break;
-                            case Metavision::UIKeyEvent::KEY_RIGHT:
-                                if (currentFileIndex_ >= images.size() - 1) {
-                                    std::cout << "Reached the end of the image set.\n Looping back to start.\n\n";
-                                    currentFileIndex_ = 0;
-                                } else {
-                                    currentFileIndex_++;
-                                }
+                        case Metavision::UIKeyEvent::KEY_ESCAPE:
+                        case Metavision::UIKeyEvent::KEY_Q:
+                            window.set_close_flag();
+                            break;
+                        case Metavision::UIKeyEvent::KEY_D:
+                            // Toggle whether an image should be marked as valid or not.
+                            if (std::ranges::find(indexesToDiscard_, currentFileIndex_) != indexesToDiscard_.
+                                end()) {
+                                std::erase(indexesToDiscard_, currentFileIndex_);
+                            } else {
+                                indexesToDiscard_.emplace_back(currentFileIndex_);
+                            }
+                            break;
+                        case Metavision::UIKeyEvent::KEY_LEFT:
+                            if (currentFileIndex_ <= 0) {
+                                std::cout << "Reached the beginning of the image set.\n Looping to end.\n\n";
+                                currentFileIndex_ = images.size() - 1;
+                            } else {
+                                currentFileIndex_--;
+                            }
+                            // Go to previous image.
+                            updateSubimages(frameComposer, images, cams, camRefs);
+                            break;
+                        case Metavision::UIKeyEvent::KEY_RIGHT:
+                            if (currentFileIndex_ >= images.size() - 1) {
+                                std::cout << "Reached the end of the image set.\n Looping back to start.\n\n";
+                                currentFileIndex_ = 0;
+                            } else {
+                                currentFileIndex_++;
+                            }
 
-                                // Go to next image.
-                                updateSubimages(frameComposer, images, cams, camRefs);
-                                break;
+                            // Go to next image.
+                            updateSubimages(frameComposer, images, cams, camRefs);
+                            break;
                         }
                     }
                 }
@@ -272,7 +269,7 @@ namespace YACCP {
                     std::filesystem::copy(jobPath_ / "images" / "raw" / cams[j] / images[i],
                                           jobPath_ / "images" / "verified" / cams[j] / images[i]
                     );
-                } catch (const std::filesystem::filesystem_error &e) {
+                } catch (const std::filesystem::filesystem_error& e) {
                     std::cerr << e.what() << "\n";
                 }
             }

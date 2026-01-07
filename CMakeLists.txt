@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.23...3.27)
-project(stereo-camera-calibration
+project(YACCP
         LANGUAGES CXX
         VERSION 0.1)
 
@@ -32,7 +32,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 
 add_executable(
-        Calibration
+        YACCP
 
         src/manager.cpp
 
@@ -44,15 +44,26 @@ add_executable(
         src/recoding/video_viewer.cpp src/recoding/video_viewer.hpp
         src/recoding/job_data.hpp
 
-        src/tools/create_charuco_board.cpp src/tools/create_charuco_board.hpp
+        src/tools/create_board.cpp src/tools/create_board.hpp
         src/tools/image_validator.cpp src/tools/image_validator.hpp
 
         src/utility.cpp src/utility.hpp
-        src/calibration.cpp src/calibration.hpp
+        src/camera_calibration.cpp src/camera_calibration.hpp
+
+        src/cli/board_creation.cpp src/cli/board_creation.hpp
+        src/cli/calibration.cpp src/cli/calibration.hpp
+        src/cli/recording.cpp src/cli/recording.hpp
+        src/cli/validation.cpp src/cli/validation.hpp
+
+        src/config/board.cpp src/config/board.hpp
+        src/config/detection.cpp src/config/detection.hpp
+        src/config/recording.cpp src/config/recording.hpp
+        src/config/viewing.cpp src/config/viewing.hpp
+        src/config/orchestrator.cpp src/config/orchestrator.hpp
 )
 
 target_link_libraries(
-        Calibration
+        YACCP
         PRIVATE
         ${OpenCV_LIBS}
         MetavisionSDK::core MetavisionSDK::stream MetavisionSDK::ui

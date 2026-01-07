@@ -1,5 +1,5 @@
-#ifndef STEREO_CAMERA_CALIBRATION_CHARUCO_BOARD_DETECTOR_H
-#define STEREO_CAMERA_CALIBRATION_CHARUCO_BOARD_DETECTOR_H
+#ifndef YACCP_UTILITY_HPP
+#define YACCP_UTILITY_HPP
 
 #include <opencv2/objdetect/charuco_detector.hpp>
 
@@ -20,6 +20,8 @@ namespace YACCP {
         [[nodiscard]] static CharucoResults findBoard(const cv::aruco::CharucoDetector &charucoDetector,
                                                       const cv::Mat &gray,
                                                       int cornerMin = 3);
+
+        [[nodiscard]] static std::_Timeobj<char, const tm*> getCurrentDateTime();
     };
 
     template<typename T>
@@ -37,4 +39,4 @@ namespace YACCP {
     }
 }
 
-#endif //STEREO_CAMERA_CALIBRATION_CHARUCO_BOARD_DETECTOR_H
+#endif //YACCP_UTILITY_HPP

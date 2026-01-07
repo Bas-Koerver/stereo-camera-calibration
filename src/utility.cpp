@@ -21,4 +21,13 @@ namespace YACCP {
         }
         return charucoResults;
     }
+
+    std::_Timeobj<char, const tm*> Utility::getCurrentDateTime() {
+        // Get the current date and time.
+        const auto now = std::chrono::system_clock::now();
+        const auto localTime = std::chrono::system_clock::to_time_t(now);
+
+        // Generate timestamp at UTC +0
+        return std::put_time(std::gmtime(&localTime), "%F_%H-%M-%S");
+    }
 } // namespace YACCP

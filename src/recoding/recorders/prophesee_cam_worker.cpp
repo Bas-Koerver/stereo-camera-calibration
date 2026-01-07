@@ -70,12 +70,12 @@ namespace YACCP {
                                            std::vector<CamData> &camDatas,
                                            const int fps,
                                            const int id,
-                                           const int accumulation_time,
+                                           const int accumulationTime,
                                            const int fallingEdgePolarity,
                                            const std::filesystem::path &outputPath,
                                            const std::string camId)
         : CameraWorker(stopSource, camDatas, fps, id, outputPath, std::move(camId)),
-          accumulationTime_(accumulation_time),
+          accumulationTime_(accumulationTime),
           fallingEdgePolarity_(fallingEdgePolarity) {
     }
 
