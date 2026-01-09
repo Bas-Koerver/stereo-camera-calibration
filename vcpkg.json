@@ -11,5 +11,8 @@
   }, {
     "name" : "tomlplusplus",
     "version>=" : "3.4.0#1"
+  }, {
+    "name" : "tabulate",
+    "version>=" : "1.5"
   } ]
 }

@@ -10,7 +10,7 @@ namespace YACCP {
     class CreateBoard {
     public:
         static void charuco(const Config::FileConfig& fileConfig,
-                            const CLI::BoardCreationConfig& boardCreationConfig,
+                            const CLI::BoardCreationCmdConfig& boardCreationConfig,
                             const std::filesystem::path& jobPath);
 
     private:

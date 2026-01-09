@@ -4,14 +4,14 @@
 
 namespace YACCP::CLI
 {
-    struct RecordingConfig
+    struct RecordingCmdConfig
     {
         bool showAvailableJobs{};
         std::string jobId{};
         bool showAvailableCams{};
     };
 
-    ::CLI::App* addRecordingCmd(::CLI::App& app, RecordingConfig& config);
+    ::CLI::App* addRecordingCmd(::CLI::App& app, RecordingCmdConfig& config);
 
 } // namespace YACCP::CLI
 

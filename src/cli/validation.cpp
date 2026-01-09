@@ -6,7 +6,7 @@
 
 namespace YACCP::CLI
 {
-    ::CLI::App* addValidationCmd(::CLI::App &app, ValidationConfig &config) {
+    ::CLI::App* addValidationCmd(::CLI::App &app, ValidationCmdConfig &config) {
         ::CLI::App* subCmd = app.add_subcommand("validate", "Validate recorded images");
 
         subCmd->add_flag("-s, --show-jobs", config.showAvailableJobs, "Show available jobs");

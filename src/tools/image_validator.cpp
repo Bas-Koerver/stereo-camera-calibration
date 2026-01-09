@@ -50,7 +50,7 @@ namespace YACCP {
             std::cout << "  " << entry.path().filename() << "\n";
         }
 
-        std::cout << "Jobs already validated: \n";
+        std::cout << "\nJobs already validated: \n";
         for (auto const& entry : std::filesystem::directory_iterator(dataPath)) {
             if (!entry.is_directory()) continue;
 
@@ -66,15 +66,15 @@ namespace YACCP {
     void ImageValidator::validateImages(int resolutionWidth,
                                         int resolutionHeight,
                                         const std::filesystem::path& dataPath,
-                                        const std::string& jobName) {
-        jobPath_ = dataPath / jobName;
+                                        const std::string& jobId) {
+        jobPath_ = dataPath / jobId;
         if (!exists(jobPath_)) {
-            std::cerr << "Job: " << jobName << " does not exist in the given path: " << dataPath << "\n";
+            std::cerr << "Job: " << jobId << " does not exist in the given path: " << dataPath << "\n";
             return;
         }
 
         if (!ImageValidator::isNonEmptyDirectory(jobPath_ / "images" / "raw")) {
-            std::cerr << "No raw images found for job: " << jobName << "\n";
+            std::cerr << "\nNo raw images found for job: " << jobId << "\n";
             return;
         }
 
@@ -94,7 +94,7 @@ namespace YACCP {
         std::ranges::sort(images);
 
         if (!exists(jobPath_ / "job_data.json")) {
-            std::cerr << "No camera data was found.\n Stopping! \n";
+            std::cerr << "No camera data was found.\nStopping! \n";
             return;
         }
 

@@ -14,7 +14,7 @@ namespace YACCP {
         void validateImages(int resolutionWidth,
                             int resolutionHeight,
                             const std::filesystem::path& dataPath,
-                            const std::string& jobName);
+                            const std::string& jobId);
 
         [[nodiscard]] static bool isNonEmptyDirectory(const std::filesystem::path& path);
 

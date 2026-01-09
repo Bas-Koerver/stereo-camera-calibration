@@ -46,10 +46,13 @@ namespace YACCP {
         cv::Size boardSize = board.getChessboardSize();
         int cornerAmount{(boardSize.width - 1) * (boardSize.height - 1)};
 
+        // Get all the camera directories
         for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "verified")) {
             if (!entry.is_directory()) continue;
             cams.push_back(entry.path().filename());
         }
+        // Get all the file indexes, only a single camera directory needs to be looked at,
+        // since the filenames are the same across the multiple cameras.
         for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "verified" / cams[0])) {
             if (!entry.is_regular_file()) continue;
             files.push_back(entry.path().filename());
@@ -68,7 +71,7 @@ namespace YACCP {
         }
 
         nlohmann::json jsonObj{nlohmann::json::parse(f)};
-        std::vector<YACCP::CamData::Info> camDatas(2);
+        std::vector<YACCP::CamData::Info> camDatas(cams.size());
         try {
             for (auto &[key, j]: jsonObj.at("cams").items()) {
                 YACCP::CamData cam;

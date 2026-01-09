@@ -4,13 +4,13 @@
 
 namespace YACCP::CLI
 {
-    struct ValidationConfig
+    struct ValidationCmdConfig
     {
         bool showAvailableJobs{};
         std::string jobId{};
     };
 
-    ::CLI::App* addValidationCmd(::CLI::App &app, ValidationConfig &config);
+    ::CLI::App* addValidationCmd(::CLI::App &app, ValidationCmdConfig &config);
 } // namespace YACCP::CLI
 
 #endif // YACCP_CLI_VALIDATION_HPP

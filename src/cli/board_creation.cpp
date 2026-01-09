@@ -2,7 +2,7 @@
 
 
 namespace YACCP::CLI {
-    ::CLI::App* addBoardCreationCmd(::CLI::App& app, BoardCreationConfig& config) {
+    ::CLI::App* addBoardCreationCmd(::CLI::App& app, BoardCreationCmdConfig& config) {
         ::CLI::App* subCmd = app.add_subcommand("create-board", "Board creation");
 
         subCmd->add_option("-s, --square-length", config.squareLength, "The square length in pixels")

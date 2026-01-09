@@ -1,7 +1,7 @@
 #include "calibration.hpp"
 
 namespace YACCP::CLI {
-    CalibrationCmds addCalibrationCmds(::CLI::App& app, CalibrationConfig &config) {
+    CalibrationCmds addCalibrationCmds(::CLI::App& app, CalibrationCmdConfig &config) {
         CalibrationCmds calibrationCmds;
 
         calibrationCmds.calibration = app.add_subcommand("calibration", "Global calibration command");

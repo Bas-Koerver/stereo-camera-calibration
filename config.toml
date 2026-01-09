@@ -57,9 +57,9 @@ minimum_corner_fraction = 0.125
 [recording]
 fps = 30
 accumulation_time = 33333
-slave_workers = ["prophesee"]
+slave_workers = ["prophesee", "basler"]
 master_worker = "basler"
-cam_placement = [1, 0, 2]
+cam_placement = [0, 1]
 master_camera = 2
 
 [recording.workers.prophesee]

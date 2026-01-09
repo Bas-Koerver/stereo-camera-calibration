@@ -1,4 +1,5 @@
 #define NOMINMAX
+#include "cli/orchestrator.hpp"
 #ifdef NDEBUG
 #include <opencv2/core/utils/logger.hpp>
 #endif
@@ -41,7 +42,7 @@ int getWorstStopCode(const std::vector<YACCP::CamData>& camDatas) {
 }
 
 int main(int argc, char** argv) {
-    // Decrease log level to warning for release builds
+    // Decrease log level to warning for release builds.
 #ifdef NDEBUG
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
 #endif
@@ -58,40 +59,16 @@ int main(int argc, char** argv) {
     /*
      * CLI
      */
-    CLI::App app{"Yet Another Camera Calibration Platform (YACCP)"};
-    app.get_formatter()->right_column_width(60);
-    app.get_formatter()->column_width(60);
-    app.set_help_all_flag("--help-all", "Expand all help");
-
-    // app.require_subcommand(1);
-
-    // Global CLI options and flags.
-    std::filesystem::path userPath;
-    app.add_option("-p,--path", userPath, "Path where config file is stored and where data directory will be placed")
-       ->default_str("Defaults to current dir")
-       ->check(CLI::ExistingPath);
-
-    // "boardCreation" CLI options and flags.
-    YACCP::CLI::BoardCreationConfig boardCreationConfig;
-    CLI::App* boardCreation{YACCP::CLI::addBoardCreationCmd(app, boardCreationConfig)};
-
-    YACCP::CLI::RecordingConfig recordingConfig;
-    CLI::App* recording{YACCP::CLI::addRecordingCmd(app, recordingConfig)};
-
-    YACCP::CLI::ValidationConfig validationConfig;
-    CLI::App* validation{YACCP::CLI::addValidationCmd(app, validationConfig)};
-
-    YACCP::CLI::CalibrationConfig calibrationConfig;
-    YACCP::CLI::CalibrationCmds calibrationCmds = YACCP::CLI::addCalibrationCmds(app, calibrationConfig);
-
-    CLI11_PARSE(app, argc, argv);
-
-    std::stringstream dateTime;
-    dateTime << YACCP::Utility::getCurrentDateTime();
+    YACCP::CLI::CliCmdConfig cliCmdConfig;
+    YACCP::CLI::CliCmds cliCmds;
+    YACCP::CLI::addCli(cliCmdConfig, cliCmds);
+    CLI11_PARSE(cliCmds.app, argc, argv);
 
     // Construct the path where everything needs to be stored
+    std::stringstream dateTime;
+    dateTime << YACCP::Utility::getCurrentDateTime();
     auto workingDir = std::filesystem::current_path();
-    std::filesystem::path path = workingDir / userPath;
+    std::filesystem::path path = workingDir / cliCmdConfig.appCmdConfig.userPath;
     std::filesystem::path dataPath = path / "data";
 
     /*
@@ -128,27 +105,30 @@ int main(int argc, char** argv) {
         {"PropheseeDVS", YACCP::WorkerTypes::prophesee},
         {"BaslerRGB", YACCP::WorkerTypes::basler},
     };
+    std::filesystem::path jobPath;
 
-    if (*boardCreation) {
-        std::filesystem::path jobPath = dataPath / ("job_" + dateTime.str());
+    if (*cliCmds.boardCreationCmd) {
+        jobPath = dataPath / ("job_" + dateTime.str());
         std::filesystem::create_directories(jobPath);
         YACCP::CreateBoard::charuco(fileConfig, boardCreationConfig, jobPath);
     }
 
 
-    if (*recording) {
+    if (*cliCmds.recordingCmd) {
         if (recordingConfig.jobId.empty()) {
+            std::cout << "No job ID given, using most recent one.\n";
             std::vector<std::filesystem::path> jobs;
-            for (const auto& entry : std::filesystem::directory_iterator(path ))
+            for (const auto& entry : std::filesystem::directory_iterator(dataPath))
             {
                 jobs.emplace_back(entry.path());
             }
-            std::filesystem::path jobPath = jobs.back();
-        }
-
-        std::filesystem::path jobPath = path / "data" / recordingConfig.jobId;
-        if (!is_directory(jobPath)) {
-            std::cerr << "Job with ID: " << jobPath.string() << " Does not exist\n";
+            jobPath = jobs.back();
+            std::cout << jobPath << "\n\n";
+        } else {
+            jobPath = dataPath / recordingConfig.jobId;
+            if (!is_directory(jobPath)) {
+                std::cerr << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath << "\n";
+            }
         }
 
         (void)std::filesystem::create_directories(jobPath / "images/raw");
@@ -252,7 +232,7 @@ int main(int argc, char** argv) {
             thread.join();
         }
         // Create json object with camera data.
-        std::cout << "Creating job_data.json";
+        std::cout << "\nWriting job_data.json\n";
         // YACCP::CharucoConfig charucoConfig;
         // charucoConfig.openCvDictionaryId = dictId;
         // charucoConfig.boardSize = cv::Size(squaresX, squaresY);
@@ -276,7 +256,7 @@ int main(int argc, char** argv) {
     }
 
 
-    if (*validation) {
+    if (*validationCmd) {
         if (validationConfig.showAvailableJobs) YACCP::ImageValidator::listJobs(dataPath);
 
         YACCP::ImageValidator imageValidator;
@@ -286,14 +266,14 @@ int main(int argc, char** argv) {
                                       validationConfig.jobId);
     }
 
-    if (*calibrationCmds.calibration) {
+    if (*calibrationCmd.calibration) {
         YACCP::CameraCalibration calibration(charucoDetector, path, fileConfig.detectionConfig.cornerMin);
         //
         // calibration.monoCalibrate("job_2025-12-28_18-54-04");
         //
         // return 0;
-        if (*calibrationCmds.mono) {
-        } else if (*calibrationCmds.stereo) {
+        if (*calibrationCmd.mono) {
+        } else if (*calibrationCmd.stereo) {
         }
     }
 

@@ -4,7 +4,7 @@
 
 namespace YACCP::CLI
 {
-    ::CLI::App* addRecordingCmd(::CLI::App& app, RecordingConfig& config) {
+    ::CLI::App* addRecordingCmd(::CLI::App& app, RecordingCmdConfig& config) {
         ::CLI::App* subCmd = app.add_subcommand("record", "Record detections");
 
         subCmd->add_flag("-s, --show-jobs", config.showAvailableJobs, "Show available jobs");

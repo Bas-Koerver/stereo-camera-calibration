@@ -3,7 +3,7 @@
 #include <CLI/App.hpp>
 
 namespace YACCP::CLI {
-    struct BoardCreationConfig
+    struct BoardCreationCmdConfig
     {
         int squareLength{100};
         int markerLength{70};
@@ -13,7 +13,7 @@ namespace YACCP::CLI {
         bool generateVideo{false};
     };
 
-    ::CLI::App* addBoardCreationCmd(::CLI::App& app, BoardCreationConfig& config);
+    ::CLI::App* addBoardCreationCmd(::CLI::App& app, BoardCreationCmdConfig& config);
 } // namespace YACCP::CLI
 
 #endif // YACCP_CLI_BOARD_CREATION_HPP
