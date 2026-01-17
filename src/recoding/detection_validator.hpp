@@ -21,7 +21,7 @@ namespace YACCP {
                            const cv::aruco::CharucoDetector &charucoDetector,
                            moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ,
                            const std::filesystem::path &outputPath,
-                           float cornerMin = .5F);
+                           float cornerMin);
 
 
         void start();

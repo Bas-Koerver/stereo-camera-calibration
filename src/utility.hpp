@@ -66,7 +66,7 @@ namespace YACCP::Utility {
 
     [[nodiscard]] CharucoResults findBoard(const cv::aruco::CharucoDetector& charucoDetector,
                                        const cv::Mat& gray,
-                                       int cornerMin = 3);
+                                       int cornerMin);
 
     [[nodiscard]] std::_Timeobj<char, const tm*> getCurrentDateTime();
 

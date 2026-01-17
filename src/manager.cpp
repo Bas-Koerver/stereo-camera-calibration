@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
     }
 
 
-    if (*cliCmds.recordingCmd || true) {
+    if (*cliCmds.recordingCmd) {
         if (cliCmdConfig.recordingCmdConfig.jobId.empty()) {
             std::cout << "No job ID given, using most recent one.\n";
             std::vector<std::filesystem::path> jobs;
