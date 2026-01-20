@@ -1,19 +1,16 @@
 #include "image_validator.hpp"
 
-#include <fstream>
-#include <iostream>
+#include "../utility.hpp"
 
-#include <metavision/sdk/core/utils/frame_composer.h>
+#include <fstream>
+// #include <iostream>
+
 #include <metavision/sdk/ui/utils/event_loop.h>
 #include <metavision/sdk/ui/utils/window.h>
 
-#include <nlohmann/json.hpp>
-
-#include "../utility.hpp"
+// #include <nlohmann/json.hpp>
 
 namespace YACCP {
-
-
     void ImageValidator::updateSubimages(Metavision::FrameComposer& frameComposer,
                                          const std::vector<std::filesystem::path>& files,
                                          const std::vector<std::filesystem::path>& cams,

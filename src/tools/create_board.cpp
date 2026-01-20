@@ -1,12 +1,12 @@
 #include "create_board.hpp"
 
-#include <iostream>
+// #include <iostream>
 
-#include <opencv2/core.hpp>
+// #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
-#include <opencv2/objdetect/charuco_detector.hpp>
+// #include <opencv2/objdetect/charuco_detector.hpp>
 
 namespace YACCP {
     void CreateBoard::generateVideo(const cv::Mat& image, cv::Size size, std::filesystem::path jobPath) {
@@ -39,9 +39,10 @@ namespace YACCP {
 
             std::filesystem::path rawPath = entry.path() / "images" / "raw";
 
-            bool jobDataFound{!(entry.path() / "job_data.json").empty()};
-            bool imageFound{!(entry.path() / "board.png").empty()};
-            bool videoFound{!(entry.path() / "video.mp4").empty()};
+            const bool jobDataFound{!(entry.path() / "job_data.json").empty()};
+            const bool imageFound{!(entry.path() / "board.png").empty()};
+            const bool videoFound{!(entry.path() / "video.mp4").empty()};
+
             if (!jobDataFound || (imageFound && videoFound)) continue;
 
             std::cout << "  " << entry.path().filename() << "\n";
@@ -51,24 +52,31 @@ namespace YACCP {
     void CreateBoard::charuco(const Config::FileConfig& fileConfig,
                               const CLI::BoardCreationCmdConfig& boardCreationConfig,
                               const std::filesystem::path& jobPath) {
-        const cv::aruco::Dictionary dictionary{cv::aruco::getPredefinedDictionary(fileConfig.detectionConfig.openCvDictionaryId)};
+        const cv::aruco::Dictionary dictionary{
+            cv::aruco::getPredefinedDictionary(fileConfig.detectionConfig.openCvDictionaryId)
+        };
         const cv::aruco::CharucoBoard board{
             fileConfig.boardConfig.boardSize,
-            static_cast<float>(boardCreationConfig.squareLength),
-            static_cast<float>(boardCreationConfig.markerLength),
+            static_cast<float>(fileConfig.boardConfig.squarePixelLength),
+            static_cast<float>(fileConfig.boardConfig.markerPixelLength),
             dictionary
         };
 
         const int width{
-            fileConfig.boardConfig.boardSize.width * boardCreationConfig.squareLength + 2 * boardCreationConfig.marginSize
+            fileConfig.boardConfig.boardSize.width * fileConfig.boardConfig.squarePixelLength + 2 * fileConfig.
+            boardConfig.marginSize
         };
         const int height{
-            fileConfig.boardConfig.boardSize.height * boardCreationConfig.squareLength + 2 * boardCreationConfig.marginSize
+            fileConfig.boardConfig.boardSize.height * fileConfig.boardConfig.squarePixelLength + 2 * fileConfig.
+            boardConfig.marginSize
         };
         cv::Mat boardImage;
         const cv::Size imageSize(width, height);
 
-        board.generateImage(imageSize, boardImage, boardCreationConfig.marginSize, boardCreationConfig.borderBits);
+        board.generateImage(imageSize,
+                            boardImage,
+                            fileConfig.boardConfig.marginSize,
+                            fileConfig.boardConfig.borderBits);
 
         if (boardCreationConfig.generateImage) cv::imwrite((jobPath / "board.png").string(), boardImage);
 

@@ -9,13 +9,13 @@ namespace YACCP {
     class PropheseeCamWorker final : public CameraWorker {
     public:
         PropheseeCamWorker(std::stop_source stopSource,
-                           std::vector<CamData> &camDatas,
-                           Config::RecordingConfig &recordingConfig,
+                           std::vector<CamData>& camDatas,
+                           Config::RecordingConfig& recordingConfig,
                            const Config::Prophesee& configBackend,
                            int index,
-                           const std::filesystem::path &jobPath);
+                           const std::filesystem::path& jobPath);
 
-        void listAvailableSources() override;
+        static void listAvailableSources();
 
         void start() override;
 

@@ -1,8 +1,7 @@
 #ifndef YACCP_UTILITY_HPP
 #define YACCP_UTILITY_HPP
-
-#include <fstream>
-#include <iostream>
+#include "config/orchestrator.hpp"
+#include "recoding/job_data.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -65,27 +64,20 @@ namespace YACCP::Utility {
     void clearScreen();
 
     [[nodiscard]] CharucoResults findBoard(const cv::aruco::CharucoDetector& charucoDetector,
-                                       const cv::Mat& gray,
-                                       int cornerMin);
+                                           const cv::Mat& gray,
+                                           int cornerMin);
 
     [[nodiscard]] std::_Timeobj<char, const tm*> getCurrentDateTime();
 
-    bool isNonEmptyDirectory(const std::filesystem::path& path);
+    [[nodiscard]] bool isNonEmptyDirectory(const std::filesystem::path& path);
 
-    [[nodiscard]] nlohmann::json loadJsonFromFile(std::ifstream& file);
+    [[nodiscard]] nlohmann::json loadJsonFromFile(std::ifstream & file);
+
+    void saveJsonToFile(const std::filesystem::path& jobPath, Config::FileConfig& fileConfig, std::vector<CamData>& camDatas);
 
     [[nodiscard]] std::ifstream openFile(const std::filesystem::path& path, const std::string& fileName);
 
-    [[nodiscard]] nlohmann::json parseJsonFromFile(std::ifstream& file);
-
-
-
-
-
-
-
-
-
+    [[nodiscard]] nlohmann::json parseJsonFromFile(std::ifstream & file);
 } // YACCP::Utility
 
 

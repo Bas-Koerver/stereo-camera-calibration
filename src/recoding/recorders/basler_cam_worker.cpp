@@ -1,17 +1,17 @@
 #define NOMINMAX
-
 #include "basler_cam_worker.hpp"
 
-#include <mutex>
-
-#include <opencv2/imgproc.hpp>
-#include <opencv2/core/mat.hpp>
-
-#include <pylon/PylonIncludes.h>
-
 #include "../job_data.hpp"
-#include "../detection_validator.hpp"
 
+#include <tabulate/table.hpp>
+// #include "../detection_validator.hpp"
+
+// #include <mutex>
+
+// #include <opencv2/imgproc.hpp>
+// #include <opencv2/core/mat.hpp>
+
+// #include <pylon/PylonIncludes.h>
 
 class FrameHandler : public Pylon::CImageEventHandler {
 public:
@@ -117,6 +117,7 @@ namespace YACCP {
     }
 
     void BaslerCamWorker::listAvailableSources() {
+        Pylon::PylonInitialize();
         Pylon::CTlFactory& TlFactory = Pylon::CTlFactory::GetInstance();
         Pylon::DeviceInfoList_t lstDevices;
 
@@ -131,13 +132,15 @@ namespace YACCP {
             Pylon::PylonTerminate();
         }
 
+        std::cout << "Available Basler cameras:\n";
+
         for (auto device : lstDevices) {
             const auto type = device.GetDeviceFactory();
             const auto id = device.GetFullName();
-
             std::cout << "Source type: " << type << "\n";
             std::cout << "- ID: " << id << "\n";
         }
+        std::cout << "\n";
     }
 
     void BaslerCamWorker::start() {

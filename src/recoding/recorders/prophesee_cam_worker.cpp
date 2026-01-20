@@ -1,8 +1,13 @@
 #include "prophesee_cam_worker.hpp"
 
-#include <filesystem>
-#include <iostream>
-#include <string>
+// #include "camera_worker.hpp"
+// #include "../detection_validator.hpp"
+#include "../job_data.hpp"
+// #include "../../config/recording.hpp"
+
+// #include <filesystem>
+// #include <iostream>
+// #include <string>
 
 #include <metavision/hal/facilities/i_hw_identification.h>
 #include <metavision/hal/facilities/i_ll_biases.h>
@@ -12,51 +17,44 @@
 #include <metavision/sdk/core/utils/cd_frame_generator.h>
 #include <metavision/sdk/stream/camera.h>
 
-#include "camera_worker.hpp"
-
-#include "../detection_validator.hpp"
-#include "../job_data.hpp"
-#include "../../config/recording.hpp"
-
-
 namespace YACCP {
     std::string sourceTypeToString(Metavision::OnlineSourceType type) {
         switch (type) {
-            case Metavision::OnlineSourceType::EMBEDDED:
-                return "EMBEDDED";
-            case Metavision::OnlineSourceType::USB:
-                return "USB";
-            case Metavision::OnlineSourceType::REMOTE:
-                return "REMOTE";
-            default:
-                return "UNKNOWN";
+        case Metavision::OnlineSourceType::EMBEDDED:
+            return "EMBEDDED";
+        case Metavision::OnlineSourceType::USB:
+            return "USB";
+        case Metavision::OnlineSourceType::REMOTE:
+            return "REMOTE";
+        default:
+            return "UNKNOWN";
         }
     }
 
-    void configureBiases(Metavision::Device &device) {
-        auto *biases = device.get_facility<::Metavision::I_LL_Biases>();
-        (void) biases->set("bias_diff_off", 56);
-        (void) biases->set("bias_diff_on", 56);
+    void configureBiases(Metavision::Device& device) {
+        auto* biases = device.get_facility<::Metavision::I_LL_Biases>();
+        (void)biases->set("bias_diff_off", 56);
+        (void)biases->set("bias_diff_on", 56);
     }
 
-    void configureTimingInterfaces(Metavision::Device &device) {
+    void configureTimingInterfaces(Metavision::Device& device) {
         auto i_trigger_in = device.get_facility<Metavision::I_TriggerIn>();
-        (void) i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
+        (void)i_trigger_in->enable(Metavision::I_TriggerIn::Channel::Main);
     }
 
-    void configureFacilities(Metavision::Camera &camera) {
-        Metavision::Device &device = camera.get_device();
+    void configureFacilities(Metavision::Camera& camera) {
+        Metavision::Device& device = camera.get_device();
         configureBiases(device);
         // TODO: Handle scenarios where the camera doesn't support external triggers
         configureTimingInterfaces(device);
     }
 
-    void printCurrentDevice(Metavision::Camera &cam, CamData &camData) {
-        auto &device = cam.get_device();
+    void printCurrentDevice(Metavision::Camera& cam, CamData& camData) {
+        auto& device = cam.get_device();
 
         // Facility that gives hardware info
-        if (auto *hw_id = device.get_facility<Metavision::I_HW_Identification>()) {
-            for (const auto &kv: hw_id->get_system_info()) {
+        if (auto* hw_id = device.get_facility<Metavision::I_HW_Identification>()) {
+            for (const auto& kv : hw_id->get_system_info()) {
                 if (kv.first == "device0 name") {
                     std::cout << "Using Prophesee device: " << kv.second << '\n';
                     camData.info.camName = kv.second;
@@ -68,11 +66,11 @@ namespace YACCP {
     }
 
     PropheseeCamWorker::PropheseeCamWorker(std::stop_source stopSource,
-                                           std::vector<CamData> &camDatas,
-                                           Config::RecordingConfig &recordingConfig,
+                                           std::vector<CamData>& camDatas,
+                                           Config::RecordingConfig& recordingConfig,
                                            const Config::Prophesee& configBackend,
                                            int index,
-                                           const std::filesystem::path &jobPath)
+                                           const std::filesystem::path& jobPath)
         : CameraWorker(stopSource, camDatas, recordingConfig, index, jobPath), configBackend_(configBackend) {
     }
 
@@ -84,9 +82,10 @@ namespace YACCP {
             return;
         }
 
-        for (const auto &source: sources) {
-            const auto &type = source.first;
-            const auto &ids = source.second;
+        std::cout << "Available Prophesee cameras:\n";
+        for (const auto& source : sources) {
+            const auto& type = source.first;
+            const auto& ids = source.second;
             std::string typeName;
 
             typeName = sourceTypeToString(type);
@@ -94,10 +93,11 @@ namespace YACCP {
             std::cout << "Source type: " << typeName << "\n";
 
             // Print connected Prophesee cameras
-            for (const auto &id: ids) {
+            for (const auto& id : ids) {
                 std::cout << "- ID: " << id << "\n";
             }
         }
+        std::cout << "\n";
     }
 
 
@@ -109,7 +109,7 @@ namespace YACCP {
                 // open the first available camera
                 cam = Metavision::Camera::from_first_available();
                 camData_.runtimeData.isOpen.store(true);
-            } catch (Metavision::CameraException &e) {
+            } catch (Metavision::CameraException& e) {
                 std::cerr << e.what() << "\n";
                 camData_.runtimeData.exitCode = 2;
                 stopSource_.request_stop();
@@ -120,7 +120,7 @@ namespace YACCP {
                 // open the first available camera
                 cam = Metavision::Camera::from_serial(recordingConfig_.workers[index_].camUuid);
                 camData_.runtimeData.isOpen.store(true);
-            } catch (Metavision::CameraException &e) {
+            } catch (Metavision::CameraException& e) {
                 std::cerr << e.what() << "\n";
                 camData_.runtimeData.exitCode = 2;
                 stopSource_.request_stop();
@@ -138,7 +138,7 @@ namespace YACCP {
             Metavision::timestamp cd_frame_ts{0};
             // Set polarity filter to only include events with a positive polarity.
             Metavision::PolarityFilterAlgorithm pol_filter{1};
-            const auto &geometry = cam.geometry();
+            const auto& geometry = cam.geometry();
             camData_.info.resolution.width = geometry.get_width();
             camData_.info.resolution.height = geometry.get_height();
             bool requestNew{true};
@@ -157,19 +157,19 @@ namespace YACCP {
             };
 
 
-            (void) cdFrameGenerator.start(
+            (void)cdFrameGenerator.start(
                 recordingConfig_.fps,
-                [&cd_frame_mutex, &cdFrame, &cd_frame_ts](const Metavision::timestamp &ts, const cv::Mat &frame) {
+                [&cd_frame_mutex, &cdFrame, &cd_frame_ts](const Metavision::timestamp& ts, const cv::Mat& frame) {
                     std::unique_lock<std::mutex> lock(cd_frame_mutex);
                     cd_frame_ts = ts;
                     frame.copyTo(cdFrame);
                 });
 
-            (void) cam.ext_trigger().add_callback(
-                [this, &onDemandFrameGenerator, &requestNew](const Metavision::EventExtTrigger *begin,
-                                                             const Metavision::EventExtTrigger *end) {
+            (void)cam.ext_trigger().add_callback(
+                [this, &onDemandFrameGenerator, &requestNew](const Metavision::EventExtTrigger* begin,
+                                                             const Metavision::EventExtTrigger* end) {
                     if (requestedFrame_ < 0) {
-                        (void) camData_.runtimeData.frameRequestQ.try_dequeue(requestedFrame_);
+                        (void)camData_.runtimeData.frameRequestQ.try_dequeue(requestedFrame_);
                     }
 
                     for (auto ev = begin; ev != end; ++ev) {
@@ -192,10 +192,10 @@ namespace YACCP {
                     }
                 });
 
-            (void) cam.cd().add_callback(
+            (void)cam.cd().add_callback(
                 [&pol_filter, &cdFrameGenerator, &onDemandFrameGenerator](
-            const Metavision::EventCD *begin,
-            const Metavision::EventCD *end) {
+                const Metavision::EventCD* begin,
+                const Metavision::EventCD* end) {
                     std::vector<Metavision::EventCD> polFilterOut;
                     pol_filter.process_events(begin, end, std::back_inserter(polFilterOut));
                     begin = polFilterOut.data();
@@ -206,8 +206,8 @@ namespace YACCP {
                 });
 
             // TODO: Make event file recording optional.
-            (void) cam.start();
-            (void) cam.start_recording(jobPath_ / "event_file.raw");
+            (void)cam.start();
+            (void)cam.start_recording(jobPath_ / "event_file.raw");
 
             // TODO: Add master mode.
             camData_.runtimeData.isRunning.store(cam.is_running());
@@ -227,8 +227,8 @@ namespace YACCP {
                 }
             }
 
-            (void) cam.stop_recording();
-            (void) cam.stop();
+            (void)cam.stop_recording();
+            (void)cam.stop();
         } else {
             stopSource_.request_stop();
         }

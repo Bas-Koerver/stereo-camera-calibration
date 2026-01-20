@@ -1,12 +1,10 @@
+#include "utility.hpp"
+
 #include <filesystem>
+#include <fstream>
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/objdetect/aruco_detector.hpp>
-#include <opencv2/objdetect/charuco_detector.hpp>
-
-#include "utility.hpp"
-
-#include <iostream>
 
 namespace YACCP::Utility {
     void clearScreen() {
@@ -53,7 +51,7 @@ namespace YACCP::Utility {
     nlohmann::json loadJsonFromFile(std::ifstream& file) {
         nlohmann::json j;
         try {
-            nlohmann::json j{nlohmann::json::parse(file)};
+            j = nlohmann::json::parse(file);
         } catch (const nlohmann::json::parse_error& e) {
             std::stringstream ss{};
             ss << "There is a problem with the job_data.json\n" << e.what();
@@ -61,6 +59,24 @@ namespace YACCP::Utility {
         }
 
         return j;
+    }
+
+    void saveJsonToFile(const std::filesystem::path& jobPath, Config::FileConfig& fileConfig, std::vector<CamData>& camDatas) {
+        // Create JSON object with all information on this job,
+        // that includes the configured parameters in the config.toml and information about the job itself.
+        std::cout << "\nWriting job_data.json\n";
+        nlohmann::json j;
+        j["openCv"] = CV_VERSION;
+        j["config"] = fileConfig;
+        j["cams"] = nlohmann::json::object();
+
+        for (auto i{0}; i < camDatas.size(); ++i) {
+            j["cams"]["cam_" + std::to_string(i)] = camDatas[i].info;
+        }
+
+        // Save JSON to a file.
+        std::ofstream file(jobPath / "job_data.json");
+        file << j.dump(4);
     }
 
     std::ifstream openFile(const std::filesystem::path& path, const std::string& fileName) {
@@ -73,10 +89,4 @@ namespace YACCP::Utility {
 
         return file;
     }
-
-
-
-
-
-
 } // YACCP::Utility

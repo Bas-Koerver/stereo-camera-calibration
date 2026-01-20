@@ -7,8 +7,7 @@ namespace YACCP::Config {
         int viewsHorizontal{};
     };
 
-    void parseViewingConfig(const toml::table& tbl, ViewingConfig &viewingConfig);
-
+    void parseViewingConfig(const toml::table& tbl, ViewingConfig& viewingConfig);
 } // YACCP::Config
 
 #endif //YACCP_CONFIG_VIEWING_HPP

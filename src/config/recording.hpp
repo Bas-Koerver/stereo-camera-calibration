@@ -1,9 +1,11 @@
 #ifndef YACCP_CONFIG_RECORDING_HPP
 #define YACCP_CONFIG_RECORDING_HPP
-#include <iostream>
 #include <variant>
-#include <toml++/toml.hpp>
+
 #include <nlohmann/json.hpp>
+
+#include <toml++/toml.hpp>
+
 
 namespace YACCP {
     enum class WorkerTypes;
@@ -60,16 +62,17 @@ namespace YACCP::Config {
         };
 
         std::visit([&](const auto& workerBackend) {
-            using T = std::decay_t<decltype(workerBackend)>;
+                       using T = std::decay_t<decltype(workerBackend)>;
 
-            if constexpr (std::is_same_v<T, Basler>) {
-                j["type"] = "basler";
-            } else if constexpr (std::is_same_v<T, Prophesee>) {
-                j["type"] = "prophesee";
-                    nlohmann::json bj(workerBackend);
-                    j.update(bj);
-            }
-        }, w.configBackend);
+                       if constexpr (std::is_same_v<T, Basler>) {
+                           j["type"] = "basler";
+                       } else if constexpr (std::is_same_v<T, Prophesee>) {
+                           j["type"] = "prophesee";
+                           nlohmann::json bj(workerBackend);
+                           j.update(bj);
+                       }
+                   },
+                   w.configBackend);
     }
 
     inline void from_json(const nlohmann::json& j, RecordingConfig::Worker& w) {
@@ -83,9 +86,7 @@ namespace YACCP::Config {
         if (type == "basler") {
             w.configBackend = Basler{};
         } else if (type == "prophesee") {
-            Prophesee p{};
-            j.at("accumulationTime").get_to(p.accumulationTime);
-            j.at("saveEventFile").get_to(p.saveEventFile);
+            w.configBackend = j.get<Prophesee>();
         } else {
             throw std::runtime_error("Unknown worker type: " + type);
         }

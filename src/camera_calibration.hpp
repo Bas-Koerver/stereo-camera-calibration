@@ -1,20 +1,21 @@
 #ifndef YACCP_CAMERA_CALIBRATION_HPP
 #define YACCP_CAMERA_CALIBRATION_HPP
 #include <filesystem>
+
 #include <opencv2/objdetect/charuco_detector.hpp>
 
 namespace YACCP {
     class CameraCalibration {
     public:
-        CameraCalibration(const cv::aruco::CharucoDetector &charucoDetector,
-                    const std::filesystem::path &dataPath,
-                    float cornerMin);
+        CameraCalibration(const cv::aruco::CharucoDetector& charucoDetector,
+                          const std::filesystem::path& dataPath,
+                          float cornerMin);
 
-        void monoCalibrate(const std::string &jobName);
+        void monoCalibrate(const std::string& jobName);
 
     private:
         const cv::aruco::CharucoDetector charucoDetector_;
-        const std::filesystem::path &dataPath_;
+        const std::filesystem::path& dataPath_;
         std::filesystem::path jobPath_{};
         const float cornerMin_;
 

@@ -1,13 +1,9 @@
 #ifndef YACCP_RECORDING_JOB_DATA_HPP
 #define YACCP_RECORDING_JOB_DATA_HPP
-#include <readerwriterqueue.h>
-
-#include <nlohmann/json.hpp>
-
-#include <opencv2/core/mat.hpp>
-#include <opencv2/objdetect/aruco_detector.hpp>
-
 #include "detection_validator.hpp"
+
+// #include <readerwriterqueue.h>
+
 
 namespace YACCP {
     static nlohmann::json matTo2dArray(const cv::Mat& m) {

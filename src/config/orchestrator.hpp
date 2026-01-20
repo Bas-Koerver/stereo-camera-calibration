@@ -1,11 +1,11 @@
 #ifndef YACCP_CONFIG_ORCHESTRATOR_HPP
 #define YACCP_CONFIG_ORCHESTRATOR_HPP
-#include <filesystem>
-
 #include "board.hpp"
 #include "detection.hpp"
 #include "recording.hpp"
 #include "viewing.hpp"
+
+// #include <filesystem>
 
 namespace YACCP::Config {
     struct FileConfig {
@@ -16,21 +16,22 @@ namespace YACCP::Config {
     };
 
     template <typename T>
-    [[nodiscard]] T requireVariable(const toml::table &tbl, std::string_view key, std::string_view keyPath = {}) {
-        if (auto value = tbl[key].value<T>())
+    [[nodiscard]] T requireVariable(const toml::table& tbl, std::string_view key, std::string_view keyPath = {}) {
+        if (auto value = tbl[key].value < T > ())
             return *value;
 
         if (keyPath.empty())
             throw std::runtime_error("Variable: " + std::string(key) + " is missing or invalid");
 
-        throw std::runtime_error("Variable: " + std::string(key) + " at [" + std::string(keyPath) + "] is missing or invalid");
+        throw std::runtime_error(
+            "Variable: " + std::string(key) + " at [" + std::string(keyPath) + "] is missing or invalid");
     }
 
     WorkerTypes stringToWorkerType(const std::string& worker);
 
-    std::string workerTypeToString(WorkerTypes workerType);
-
     void loadConfig(FileConfig& config, const std::filesystem::path& path);
+
+    void loadBoardConfig(FileConfig& config, const std::filesystem::path& path);
 
     inline void to_json(nlohmann::json& j, const FileConfig& f) {
         j = {

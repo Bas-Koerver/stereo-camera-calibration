@@ -14,7 +14,7 @@ namespace YACCP::CLI {
         ::CLI::App* stereo{};
     };
 
-    CalibrationCmds addCalibrationCmds(::CLI::App& app, CalibrationCmdConfig& config);
+    CalibrationCmds addCalibrationCmds(::CLI::App & app, CalibrationCmdConfig & config);
 } // namespace YACCP::CLI
 
 #endif // YACCP_CLI_CALIBRATION_HPP

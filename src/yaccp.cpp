@@ -3,6 +3,7 @@
 #ifdef NDEBUG
 #include <opencv2/core/utils/logger.hpp>
 #endif
+
 #include <csignal>
 #include <fstream>
 #include <map>
@@ -13,9 +14,9 @@
 #include "camera_calibration.hpp"
 #include "utility.hpp"
 
-#include "cli/orchestrator.hpp"
 #include "cli/board_creation.hpp"
 #include "cli/calibration.hpp"
+#include "cli/orchestrator.hpp"
 #include "cli/recording.hpp"
 #include "cli/validation.hpp"
 
@@ -42,6 +43,7 @@ int getWorstStopCode(const std::vector<YACCP::CamData>& camDatas) {
     return stopCode;
 }
 
+
 int main(int argc, char** argv) {
     // Decrease log level to warning for release builds.
 #ifdef NDEBUG
@@ -65,105 +67,176 @@ int main(int argc, char** argv) {
     YACCP::CLI::addCli(cliCmdConfig, cliCmds);
     CLI11_PARSE(cliCmds.app, argc, argv);
 
-    // Construct some basic path variables.
+    /*
+    * Global variable declaration
+    */
     std::stringstream dateTime;
     dateTime << YACCP::Utility::getCurrentDateTime();
     auto workingDir = std::filesystem::current_path();
 
     std::filesystem::path path = workingDir / cliCmdConfig.appCmdConfig.userPath;
     std::filesystem::path dataPath = path / "data";
-
-    /*
-     * Config file loading
-     */
-    YACCP::Config::FileConfig fileConfig;
-    try {
-        YACCP::Config::loadConfig(fileConfig, path);
-    } catch (const std::exception& err) {
-        std::cerr << err.what() << std::endl;
-        // TODO: Single return statement.
-        return 1;
-    }
-
-    /*
-     * Variable declaration
-     */
-    cv::aruco::Dictionary dictionary{cv::aruco::getPredefinedDictionary(fileConfig.detectionConfig.openCvDictionaryId)};
-    cv::aruco::CharucoParameters charucoParams;
-    cv::aruco::DetectorParameters detParams;
-    cv::aruco::CharucoBoard board{
-        fileConfig.boardConfig.boardSize,
-        fileConfig.boardConfig.squareLength,
-        fileConfig.boardConfig.markerLength,
-        dictionary
-    };
-    cv::aruco::CharucoDetector charucoDetector(board, charucoParams, detParams);
-    std::stop_source stopSource;
-    auto numCams{static_cast<int>(fileConfig.recordingConfig.workers.size())};
-    std::vector<YACCP::CamData> camDatas(numCams);
-    std::vector<std::jthread> threads;
-    std::vector<std::unique_ptr<YACCP::CameraWorker>> cameraWorkers(numCams);
-    moodycamel::ReaderWriterQueue<YACCP::ValidatedCornersData> valCornersQ{100};
-    std::map<std::string, YACCP::WorkerTypes>{
-        {"PropheseeDVS", YACCP::WorkerTypes::prophesee},
-        {"BaslerRGB", YACCP::WorkerTypes::basler},
-    };
     std::filesystem::path jobPath;
+
 
     if (*cliCmds.boardCreationCmd) {
         // Show jobs that are missing a board image and/or video.
         if (cliCmdConfig.boardCreationCmdConfig.showAvailableJobs) {
             YACCP::CreateBoard::listJobs(dataPath);
+            // TODO: Single return statement.
+            return 0;
         }
+
+        YACCP::Config::FileConfig fileConfig;
 
         // If no job ID is given create a new one and generate a board for it.
         if (cliCmdConfig.boardCreationCmdConfig.jobId.empty()) {
+            // Load config from TOML file
+            try {
+                YACCP::Config::loadBoardConfig(fileConfig, path);
+            } catch (const std::exception& err) {
+                std::cerr << err.what() << "\n";
+                // TODO: Single return statement.
+                return 2;
+            }
+
             std::cout << "No job ID given, creating new one.\n";
             jobPath = dataPath / ("job_" + dateTime.str());
             std::filesystem::create_directories(jobPath);
         } else {
             // Otherwise generate a board for the given job ID
             jobPath = dataPath / cliCmdConfig.boardCreationCmdConfig.jobId;
+
+            // Check whether the given job exists.
             if (!is_directory(jobPath)) {
                 std::cerr << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath << "\n";
+                // TODO: Single return statement.
                 return 2;
             }
+
+            // Try to open the job_data.json
             std::ifstream file{};
             try {
                 file = YACCP::Utility::openFile(jobPath, "job_data.json");
             } catch (const std::exception& err) {
-                std::cerr << err.what() << std::endl;
+                std::cerr << err.what() << "\n";
+                // TODO: Single return statement.
                 return 2;
             }
 
-            nlohmann::json j{YACCP::Utility::loadJsonFromFile(file)};
-            // j.at("")
-            // TODO: Add create bord for existing jobs
+            // Load config from JSON file
+            try {
+                nlohmann::json j = YACCP::Utility::loadJsonFromFile(file);
+                j.at("config").get_to(fileConfig);
+            } catch (const std::exception& err) {
+                std::cerr << err.what() << "\n";
+                return 2;
+            }
         }
 
         YACCP::CreateBoard::charuco(fileConfig, cliCmdConfig.boardCreationCmdConfig, jobPath);
+
+        std::vector<YACCP::CamData> empty{};
+        YACCP::Utility::saveJsonToFile(jobPath, fileConfig, empty);
     }
 
 
     if (*cliCmds.recordingCmd) {
+        if (cliCmdConfig.recordingCmdConfig.showAvailableCams) {
+            YACCP::BaslerCamWorker::listAvailableSources();
+            YACCP::PropheseeCamWorker::listAvailableSources();
+            // TODO: Single return statement.
+            return 0;
+        }
+
+        YACCP::Config::FileConfig fileConfig;
+
         if (cliCmdConfig.recordingCmdConfig.jobId.empty()) {
-            std::cout << "No job ID given, using most recent one.\n";
+            std::cout << "No job ID given, checking if most recent job already has recording data\n";
+            // Get the most recent job
             std::vector<std::filesystem::path> jobs;
             for (const auto& entry : std::filesystem::directory_iterator(dataPath)) {
                 jobs.emplace_back(entry.path());
             }
-            jobPath = jobs.back();
-            std::cout << jobPath << "\n\n";
-            // TODO: If most recent one already has data create new job and copy settings from the latest job.
+            std::filesystem::path jobPathMostRecent{jobs.back()};
+
+            if (YACCP::Utility::isNonEmptyDirectory(jobPathMostRecent/ "images" / "raw")) {
+                std::cout << "The most recent job ID already has recoding data, creating new job and copying job_config from previous one. \n";
+                jobPath = dataPath / ("job_" + dateTime.str());
+                std::filesystem::create_directories(jobPath);
+                std::filesystem::copy(jobPathMostRecent / "job_data.json", jobPath / "job_data.json");
+
+                // Try to open the job_data.json
+                std::ifstream file{};
+                try {
+                    file = YACCP::Utility::openFile(jobPath, "job_data.json");
+                } catch (const std::exception& err) {
+                    std::cerr << err.what() << "\n";
+                    // TODO: Single return statement.
+                    return 2;
+                }
+
+                // Load config from JSON file
+                try {
+                    nlohmann::json j = YACCP::Utility::loadJsonFromFile(file);
+                    j.at("config").get_to(fileConfig);
+                } catch (const std::exception& err) {
+                    std::cerr << err.what() << "\n";
+                    return 2;
+                }
+            } else {
+                jobPath = jobPathMostRecent;
+
+                // Load config from TOML file
+                try {
+                    YACCP::Config::loadConfig(fileConfig, path);
+                } catch (const std::exception& err) {
+                    std::cerr << err.what() << std::endl;
+                    // TODO: Single return statement.
+                    return 2;
+                }
+            }
         } else {
             jobPath = dataPath / cliCmdConfig.recordingCmdConfig.jobId;
             if (!is_directory(jobPath)) {
                 std::cerr << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath << "\n";
             }
+            std::cerr << "not yet implemented";
+            return 1;
             // TODO: If given jobId already has data, ask user if he want's to overwrite the data.
         }
 
-        (void)std::filesystem::create_directories(jobPath / "images/raw");
+
+
+
+
+
+
+        cv::aruco::Dictionary dictionary{
+            cv::aruco::getPredefinedDictionary(fileConfig.detectionConfig.openCvDictionaryId)
+        };
+        cv::aruco::CharucoParameters charucoParams;
+        cv::aruco::DetectorParameters detParams;
+        cv::aruco::CharucoBoard board{
+            fileConfig.boardConfig.boardSize,
+            fileConfig.boardConfig.squareLength,
+            fileConfig.boardConfig.markerLength,
+            dictionary
+        };
+        cv::aruco::CharucoDetector charucoDetector(board, charucoParams, detParams);
+
+        std::stop_source stopSource;
+        auto numCams{static_cast<int>(fileConfig.recordingConfig.workers.size())};
+        std::vector<YACCP::CamData> camDatas(numCams);
+        std::vector<std::jthread> threads;
+        std::vector<std::unique_ptr<YACCP::CameraWorker>> cameraWorkers(numCams);
+        moodycamel::ReaderWriterQueue<YACCP::ValidatedCornersData> valCornersQ{100};
+        std::map<std::string, YACCP::WorkerTypes>{
+                {"PropheseeDVS", YACCP::WorkerTypes::prophesee},
+                {"BaslerRGB", YACCP::WorkerTypes::basler},
+            };
+
+        (void)std::filesystem::create_directories(jobPath / "images" / "raw");
 
         for (auto i{0}; i < numCams; ++i) {
             const int index{fileConfig.recordingConfig.workers[i].placement};
@@ -291,23 +364,23 @@ int main(int argc, char** argv) {
                                       cliCmdConfig.validationCmdConfig.jobId);
     }
 
-    if (*cliCmds.calibrationCmds.calibration) {
-        std::cout << "calibration called\n";
-        // TODO: Add calibration
-        // TODO: Maybe add customisations like epsilon value, iter count, CALIB_FIX_FOCALLENGTH
-        YACCP::CameraCalibration calibration(charucoDetector, path, fileConfig.detectionConfig.cornerMin);
-        //
-        // calibration.monoCalibrate("job_2025-12-28_18-54-04");
-        //
-        // return 0;
-        if (*cliCmds.calibrationCmds.mono) {
-            std::cout << "mono calibration called\n";
-        } else if (*cliCmds.calibrationCmds.stereo) {
-            std::cout << "stereo calibration called\n";
-        } else {
-            std::cout << "base calibration called\n";
-        }
-    }
+    // if (*cliCmds.calibrationCmds.calibration) {
+    //     std::cout << "calibration called\n";
+    //     // TODO: Add calibration
+    //     // TODO: Maybe add customisations like epsilon value, iter count, CALIB_FIX_FOCALLENGTH
+    //     YACCP::CameraCalibration calibration(charucoDetector, path, fileConfig.detectionConfig.cornerMin);
+    //     //
+    //     // calibration.monoCalibrate("job_2025-12-28_18-54-04");
+    //     //
+    //     // return 0;
+    //     if (*cliCmds.calibrationCmds.mono) {
+    //         std::cout << "mono calibration called\n";
+    //     } else if (*cliCmds.calibrationCmds.stereo) {
+    //         std::cout << "stereo calibration called\n";
+    //     } else {
+    //         std::cout << "base calibration called\n";
+    //     }
+    // }
 
     return 0;
 }

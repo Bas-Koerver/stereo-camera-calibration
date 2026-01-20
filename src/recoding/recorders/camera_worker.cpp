@@ -1,13 +1,10 @@
-//
-// Created by Bas_K on 2025-12-08.
-//
-
 #include "camera_worker.hpp"
+
 #include "../job_data.hpp"
 
-#include <iostream>
-#include <stop_token>
-#include <utility>
+// #include <iostream>
+// #include <stop_token>
+// #include <utility>
 
 namespace YACCP {
     CameraWorker::CameraWorker(std::stop_source stopSource,

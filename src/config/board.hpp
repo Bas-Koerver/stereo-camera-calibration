@@ -1,8 +1,9 @@
 #ifndef YACCP_CONFIG_BOARD_HPP
 #define YACCP_CONFIG_BOARD_HPP
-
 #include <nlohmann/json.hpp>
+
 #include <opencv2/core/types.hpp>
+
 #include <toml++/toml.hpp>
 
 namespace YACCP::Config {

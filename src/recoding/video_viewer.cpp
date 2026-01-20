@@ -1,17 +1,17 @@
-#include <metavision/sdk/core/utils/frame_composer.h>
-#include <metavision/sdk/ui/utils/window.h>
-#include <metavision/sdk/ui/utils/event_loop.h>
-
 #include "video_viewer.hpp"
-
-#include <fstream>
-
-#include <nlohmann/json.hpp>
-#include <numeric>
-#include <vector>
 
 #include "job_data.hpp"
 #include "../utility.hpp"
+
+// #include <fstream>
+// #include <numeric>
+// #include <vector>
+
+#include <metavision/sdk/ui/utils/event_loop.h>
+#include <metavision/sdk/ui/utils/window.h>
+
+// #include <nlohmann/json.hpp>
+
 
 cv::Scalar getColourGradient(int index, int maxIndex) {
     const double ratio{255.0 / (static_cast<double>(maxIndex) / 2.0)};
@@ -21,8 +21,8 @@ cv::Scalar getColourGradient(int index, int maxIndex) {
 }
 
 namespace YACCP {
-    template<typename T>
-    T sumVector(std::vector<T> &dimVector, int stop) {
+    template <typename T>
+    T sumVector(std::vector<T>& dimVector, int stop) {
         auto end = dimVector.begin() + stop;
         return std::reduce(dimVector.begin(), end);
     }
@@ -31,10 +31,10 @@ namespace YACCP {
                              int viewsHorizontal,
                              int resolutionWidth,
                              int resolutionHeight,
-                             std::vector<CamData> &camDatas,
-                             const cv::aruco::CharucoDetector &charucoDetector,
-                             moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ,
-                             const std::filesystem::path &outputPath,
+                             std::vector<CamData>& camDatas,
+                             const cv::aruco::CharucoDetector& charucoDetector,
+                             moodycamel::ReaderWriterQueue<ValidatedCornersData>& valCornersQ,
+                             const std::filesystem::path& outputPath,
                              float cornerMin)
         : stopSource_(stopSource),
           stopToken_(stopSource.get_token()),
@@ -49,9 +49,9 @@ namespace YACCP {
     }
 
     void VideoViewer::processFrame(std::stop_token stopToken,
-                                   CamData &camData,
+                                   CamData& camData,
                                    const int camRef,
-                                   std::atomic<int> &camDetectMode) {
+                                   std::atomic<int>& camDetectMode) {
         while (!stopToken.stop_requested()) {
             cv::Mat localFrame;
             {
@@ -70,7 +70,8 @@ namespace YACCP {
                 if (!charucoResults.markerIds.empty())
                     cv::aruco::drawDetectedMarkers(localFrame, charucoResults.markerCorners, charucoResults.markerIds);
                 if (!charucoResults.charucoIds.empty())
-                    cv::aruco::drawDetectedCornersCharuco(localFrame, charucoResults.charucoCorners,
+                    cv::aruco::drawDetectedCornersCharuco(localFrame,
+                                                          charucoResults.charucoCorners,
                                                           charucoResults.charucoIds,
                                                           cv::Scalar(0, 255, 0));
             }
@@ -79,7 +80,7 @@ namespace YACCP {
         }
     }
 
-    std::tuple<std::vector<int>, std::vector<int> > VideoViewer::calculateBiggestDims() const {
+    std::tuple<std::vector<int>, std::vector<int>> VideoViewer::calculateBiggestDims() const {
         // Calculate how many vertical rows their will be based on the amount of cameras and the set amount of cameras
         // showed horizontally.
         const int viewsVertical = static_cast<const int>(std::ceil(
@@ -121,14 +122,14 @@ namespace YACCP {
         return {rowIndex, columnIndex};
     }
 
-    std::vector<cv::Point> VideoViewer::correctCoordinates(const ValidatedCornersData &validatedCornersData) {
+    std::vector<cv::Point> VideoViewer::correctCoordinates(const ValidatedCornersData& validatedCornersData) {
         cv::Point2f offset{
             static_cast<float>(camDatas_[validatedCornersData.camId].info.camViewData.windowX),
             static_cast<float>(camDatas_[validatedCornersData.camId].info.camViewData.windowY)
         };
         std::vector<cv::Point> correctedCorners;
 
-        for (const auto &corner: validatedCornersData.charucoCorners) {
+        for (const auto& corner : validatedCornersData.charucoCorners) {
             correctedCorners.emplace_back(static_cast<cv::Point>(corner + offset));
         }
         return correctedCorners;
@@ -137,7 +138,7 @@ namespace YACCP {
     void VideoViewer::start() {
         std::vector<int> camRefs;
         std::vector<std::jthread> threads;
-        std::vector<std::vector<cv::Point> > pts;
+        std::vector<std::vector<cv::Point>> pts;
         std::atomic camDetectMode = -2;
         std::atomic detectLayerMode = true;
         std::atomic detectLayerClean = false;
@@ -165,7 +166,8 @@ namespace YACCP {
             camDatas_[i].info.camViewData.windowY = y;
 
             camRefs.emplace_back(frameComposer_.add_new_subimage_parameters(
-                    x, y,
+                    x,
+                    y,
                     {
                         static_cast<unsigned>(camDatas_[i].info.resolution.width),
                         static_cast<unsigned>(camDatas_[i].info.resolution.height)
@@ -173,10 +175,6 @@ namespace YACCP {
                     Metavision::FrameComposer::GrayToColorOptions())
             );
         }
-
-
-
-
 
 
         double scaleX{static_cast<double>(resolutionWidth_) / frameComposer_.get_total_width()};
@@ -189,7 +187,9 @@ namespace YACCP {
         cv::Mat mask = cv::Mat::zeros(height, width, CV_8UC1);
         cv::Mat display{height, width, CV_8UC3};
 
-        Metavision::Window window("Recording board detections", width * scale, height * scale,
+        Metavision::Window window("Recording board detections",
+                                  width * scale,
+                                  height * scale,
                                   Metavision::Window::RenderMode::BGR);
 
         window.set_keyboard_callback(
@@ -205,53 +205,53 @@ namespace YACCP {
                 bool layerMode;
                 if (action == Metavision::UIAction::RELEASE) {
                     switch (key) {
-                        case Metavision::UIKeyEvent::KEY_ESCAPE:
-                        case Metavision::UIKeyEvent::KEY_Q:
-                            stopSource_.request_stop();
-                            break;
-                        case Metavision::UIKeyEvent::KEY_A:
-                            if (camDetectMode == -1) {
-                                camDetectMode = -2;
-                                std::cout << "Showing no detections\n";
-                            } else {
-                                camDetectMode = -1;
-                                std::cout << "Showing detections on all cameras \n";
-                            }
-                            break;
-                        case Metavision::UIKeyEvent::KEY_S:
-                            mode = camDetectMode.load(std::memory_order_relaxed);
-                            if (mode > 0) {
-                                camDetectMode.store(mode - 1, std::memory_order_relaxed);
-                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].info.camName
-                                        <<
-                                        "\n";
-                            }
-                            break;
-                        case Metavision::UIKeyEvent::KEY_D:
-                            mode = camDetectMode.load(std::memory_order_relaxed);
-                            if (mode < static_cast<int>(camRefs.size()) - 1 && mode >= -1) {
-                                camDetectMode.store(mode + 1, std::memory_order_relaxed);
-                                std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].info.camName
-                                        <<
-                                        "\n";
-                            }
-                            break;
-                        case Metavision::UIKeyEvent::KEY_L:
-                            layerClean = detectLayerClean.load(std::memory_order_relaxed);
-                            if (!layerClean) {
-                                detectLayerClean.store(true, std::memory_order_relaxed);
-                                std::cout << "Cleaning detection overlay\n";
-                            }
-                            break;
-                        case Metavision::UIKeyEvent::KEY_Z:
-                            layerMode = detectLayerMode.load(std::memory_order_relaxed);
-                            if (!layerMode) {
-                                detectLayerMode.store(true, std::memory_order_relaxed);
-                                std::cout << "Enabling detection overlay mode\n";
-                            } else {
-                                detectLayerMode.store(false, std::memory_order_relaxed);
-                                std::cout << "Disabling detection overlay mode\n";
-                            }
+                    case Metavision::UIKeyEvent::KEY_ESCAPE:
+                    case Metavision::UIKeyEvent::KEY_Q:
+                        stopSource_.request_stop();
+                        break;
+                    case Metavision::UIKeyEvent::KEY_A:
+                        if (camDetectMode == -1) {
+                            camDetectMode = -2;
+                            std::cout << "Showing no detections\n";
+                        } else {
+                            camDetectMode = -1;
+                            std::cout << "Showing detections on all cameras \n";
+                        }
+                        break;
+                    case Metavision::UIKeyEvent::KEY_S:
+                        mode = camDetectMode.load(std::memory_order_relaxed);
+                        if (mode > 0) {
+                            camDetectMode.store(mode - 1, std::memory_order_relaxed);
+                            std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].info.camName
+                                <<
+                                "\n";
+                        }
+                        break;
+                    case Metavision::UIKeyEvent::KEY_D:
+                        mode = camDetectMode.load(std::memory_order_relaxed);
+                        if (mode < static_cast<int>(camRefs.size()) - 1 && mode >= -1) {
+                            camDetectMode.store(mode + 1, std::memory_order_relaxed);
+                            std::cout << "Showing detections on camera: " << camDatas_[camDetectMode].info.camName
+                                <<
+                                "\n";
+                        }
+                        break;
+                    case Metavision::UIKeyEvent::KEY_L:
+                        layerClean = detectLayerClean.load(std::memory_order_relaxed);
+                        if (!layerClean) {
+                            detectLayerClean.store(true, std::memory_order_relaxed);
+                            std::cout << "Cleaning detection overlay\n";
+                        }
+                        break;
+                    case Metavision::UIKeyEvent::KEY_Z:
+                        layerMode = detectLayerMode.load(std::memory_order_relaxed);
+                        if (!layerMode) {
+                            detectLayerMode.store(true, std::memory_order_relaxed);
+                            std::cout << "Enabling detection overlay mode\n";
+                        } else {
+                            detectLayerMode.store(false, std::memory_order_relaxed);
+                            std::cout << "Disabling detection overlay mode\n";
+                        }
                     }
                 }
             });

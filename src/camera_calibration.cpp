@@ -1,20 +1,16 @@
 #include "camera_calibration.hpp"
 
-#include <fstream>
-#include <iostream>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/imgcodecs.hpp>
-
 #include "utility.hpp"
 #include "recoding/job_data.hpp"
-#include "tools/image_validator.hpp"
+
+#include <fstream>
+// #include "tools/image_validator.hpp"
+
 
 namespace YACCP {
     CameraCalibration::CameraCalibration(
-        const cv::aruco::CharucoDetector &charucoDetector,
-        const std::filesystem::path &dataPath,
+        const cv::aruco::CharucoDetector& charucoDetector,
+        const std::filesystem::path& dataPath,
         float cornerMin)
         : charucoDetector_(charucoDetector),
           dataPath_(dataPath),
@@ -25,7 +21,7 @@ namespace YACCP {
     //
     // }
 
-    void CameraCalibration::monoCalibrate(const std::string &jobName) {
+    void CameraCalibration::monoCalibrate(const std::string& jobName) {
         jobPath_ = dataPath_ / jobName;
         if (!exists(jobPath_)) {
             std::cerr << "Job: " << jobName << " does not exist in the given path: " << dataPath_ << "\n";
@@ -39,21 +35,21 @@ namespace YACCP {
 
         std::vector<std::filesystem::path> cams;
         std::vector<std::filesystem::path> files;
-        std::vector<std::vector<cv::Point3f> > allObjPoints;
-        std::vector<std::vector<cv::Point2f> > allImgPoints;
+        std::vector<std::vector<cv::Point3f>> allObjPoints;
+        std::vector<std::vector<cv::Point2f>> allImgPoints;
 
         cv::aruco::CharucoBoard board{charucoDetector_.getBoard()};
         cv::Size boardSize = board.getChessboardSize();
         int cornerAmount{(boardSize.width - 1) * (boardSize.height - 1)};
 
         // Get all the camera directories
-        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "verified")) {
+        for (auto const& entry : std::filesystem::directory_iterator(jobPath_ / "images" / "verified")) {
             if (!entry.is_directory()) continue;
             cams.push_back(entry.path().filename());
         }
         // Get all the file indexes, only a single camera directory needs to be looked at,
         // since the filenames are the same across the multiple cameras.
-        for (auto const &entry: std::filesystem::directory_iterator(jobPath_ / "images" / "verified" / cams[0])) {
+        for (auto const& entry : std::filesystem::directory_iterator(jobPath_ / "images" / "verified" / cams[0])) {
             if (!entry.is_regular_file()) continue;
             files.push_back(entry.path().filename());
         }
@@ -73,24 +69,24 @@ namespace YACCP {
         nlohmann::json jsonObj{nlohmann::json::parse(f)};
         std::vector<YACCP::CamData::Info> camDatas(cams.size());
         try {
-            for (auto &[key, j]: jsonObj.at("cams").items()) {
+            for (auto& [key, j] : jsonObj.at("cams").items()) {
                 YACCP::CamData cam;
                 camDatas[j.at("camId").get<int>()] = j.get<YACCP::CamData::Info>();
             }
-        } catch (std::exception &e) {
+        } catch (std::exception& e) {
             std::cerr << e.what() << '\n';\
             return;
         }
 
         auto i{0};
-        for (auto &cam: cams) {
+        for (auto& cam : cams) {
             cv::Mat cameraMatrix(3, 3, CV_64F);
             cv::Mat distCoeffs;
             std::vector<cv::Mat> rvecs;
             std::vector<cv::Mat> tvecs;
 
 
-            for (auto &file: files) {
+            for (auto& file : files) {
                 std::vector<cv::Point3f> objPoints;
                 std::vector<cv::Point2f> imgPoints;
 
@@ -102,7 +98,9 @@ namespace YACCP {
 
                 if (!results.boardFound) continue;
 
-                board.matchImagePoints(results.charucoCorners, results.charucoIds, objPoints,
+                board.matchImagePoints(results.charucoCorners,
+                                       results.charucoIds,
+                                       objPoints,
                                        imgPoints);
                 allObjPoints.push_back(objPoints);
                 allImgPoints.push_back(imgPoints);
@@ -118,7 +116,6 @@ namespace YACCP {
                                                                     camDatas[i].calibData.tvecs);
 
             std::cout << "Calibration of cam: " << camDatas[i].camName << "ID: " << camDatas[i].camIndexId << "done \n";
-
 
 
             i++;

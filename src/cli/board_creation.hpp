@@ -1,18 +1,17 @@
 #ifndef YACCP_CLI_BOARD_CREATION_HPP
 #define YACCP_CLI_BOARD_CREATION_HPP
+#include "../global_variables/cli_defaults.hpp"
+
 #include <CLI/App.hpp>
 
+
+
 namespace YACCP::CLI {
-    struct BoardCreationCmdConfig
-    {
+    struct BoardCreationCmdConfig {
         bool showAvailableJobs{};
         std::string jobId{};
-        int squareLength{100};
-        int markerLength{70};
-        int marginSize{0};
-        int borderBits{1};
-        bool generateImage{true};
-        bool generateVideo{false};
+        bool generateImage{GlobalVariables::generateImage};
+        bool generateVideo{GlobalVariables::generateVideo};
     };
 
     ::CLI::App* addBoardCreationCmd(::CLI::App& app, BoardCreationCmdConfig& config);

@@ -1,14 +1,13 @@
 #ifndef YACCP_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP
 #define YACCP_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP
+#include "camera_worker.hpp"
+// #include "../../config/orchestrator.hpp"
+
 #include <pylon/PylonIncludes.h>
 
-#include "camera_worker.hpp"
-#include "../../config/orchestrator.hpp"
 
 
 namespace YACCP {
-    struct CamData;
-
     class BaslerCamWorker final : public CameraWorker {
     public:
         /**
@@ -21,7 +20,7 @@ namespace YACCP {
                         int index,
                         const std::filesystem::path& jobPath);
 
-        void listAvailableSources() override;
+        static void listAvailableSources();
 
         void start() override;
 

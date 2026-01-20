@@ -1,22 +1,18 @@
 #include "detection_validator.hpp"
 
-#include <stop_token>
-#include <vector>
-
-#include <opencv2/objdetect/charuco_detector.hpp>
-
-#include "../utility.hpp"
-#include "video_viewer.hpp"
 #include "job_data.hpp"
 
-#include "recorders/camera_worker.hpp"
+#include "../utility.hpp"
+
+// #include <stop_token>
+// #include <vector>
 
 namespace YACCP {
     DetectionValidator::DetectionValidator(std::stop_source stopSource,
-                                           std::vector<CamData> &camDatas,
-                                           const cv::aruco::CharucoDetector &charucoDetector,
-                                           moodycamel::ReaderWriterQueue<ValidatedCornersData> &valCornersQ,
-                                           const std::filesystem::path &outputPath,
+                                           std::vector<CamData>& camDatas,
+                                           const cv::aruco::CharucoDetector& charucoDetector,
+                                           moodycamel::ReaderWriterQueue<ValidatedCornersData>& valCornersQ,
+                                           const std::filesystem::path& outputPath,
                                            float cornerMin)
         : stopSource_(stopSource),
           stopToken_(stopSource.get_token()),
@@ -29,7 +25,7 @@ namespace YACCP {
 
     void DetectionValidator::start() {
         std::vector<VerifyTask> verifyTasks(camDatas_.size());
-        std::vector<std::vector<cv::Point2f> > allCharucoCorners(camDatas_.size());
+        std::vector<std::vector<cv::Point2f>> allCharucoCorners(camDatas_.size());
         cv::Size boardSize = charucoDetector_.getBoard().getChessboardSize();
         int validatedImagePair{};
         int validatedCorners{};
@@ -49,8 +45,8 @@ namespace YACCP {
                     if (std::find(camTaskCorrect.begin(), camTaskCorrect.end(), i) != camTaskCorrect.end()) continue;
 
                     while (!stopToken_.stop_requested() &&
-                           !camDatas_[i].runtimeData.frameVerifyQ.wait_dequeue_timed(verifyTasks[i],
-                                                                         std::chrono::milliseconds(100)));
+                        !camDatas_[i].runtimeData.frameVerifyQ.wait_dequeue_timed(verifyTasks[i],
+                            std::chrono::milliseconds(100)));
                 }
 
                 if (stopToken_.stop_requested()) {
@@ -80,7 +76,9 @@ namespace YACCP {
             cv::Mat grayFrame;
             cv::cvtColor(verifyTasks[0].frame, grayFrame, cv::COLOR_BGR2GRAY);
             Utility::CharucoResults charucoResults{
-                Utility::findBoard(charucoDetector_, grayFrame, std::floor(
+                Utility::findBoard(charucoDetector_,
+                                   grayFrame,
+                                   std::floor(
                                        static_cast<float>(cornerAmount) * cornerMin_))
             };
             if (!charucoResults.boardFound) continue;
@@ -93,7 +91,9 @@ namespace YACCP {
 
                 for (auto i{1}; i < camDatas_.size(); ++i) {
                     cv::cvtColor(verifyTasks[i].frame, grayFrame, cv::COLOR_BGR2GRAY);
-                    charucoResults = Utility::findBoard(charucoDetector_, grayFrame, std::floor(
+                    charucoResults = Utility::findBoard(charucoDetector_,
+                                                        grayFrame,
+                                                        std::floor(
                                                             static_cast<float>(cornerAmount) * cornerMin_));
                     if (!charucoResults.boardFound) {
                         continue;
@@ -104,14 +104,14 @@ namespace YACCP {
                     vec1 = Utility::intersection(vec1, vec2);
 
                     if (static_cast<float>(vec1.size()) < std::floor(
-                            static_cast<float>(cornerAmount) * cornerMin_)) {
+                        static_cast<float>(cornerAmount) * cornerMin_)) {
                         skipLoop = true;
                         break;
                     }
                 }
             } else {
                 if (static_cast<float>(vec1.size()) < std::floor(
-                        static_cast<float>(cornerAmount) * cornerMin_)) {
+                    static_cast<float>(cornerAmount) * cornerMin_)) {
                     skipLoop = true;
                 }
             }
@@ -129,7 +129,7 @@ namespace YACCP {
 
                 std::filesystem::path imagePath = outputPath_ / ("images/raw/cam_" + std::to_string(i));
                 std::string imageName = "frame_" + std::to_string(verifyTasks[i].id) + ".png";
-                (void) std::filesystem::create_directories(imagePath);
+                (void)std::filesystem::create_directories(imagePath);
 
                 cv::imwrite((imagePath / imageName).string(), verifyTasks[i].frame);
 
@@ -142,7 +142,7 @@ namespace YACCP {
                 validatedCornersData.charucoCorners = allCharucoCorners[i];
                 validatedCornersData.validatedImagePair = validatedImagePair;
                 validatedCornersData.validatedCorners = validatedCorners;
-                (void) valCornersQ_.enqueue(validatedCornersData);
+                (void)valCornersQ_.enqueue(validatedCornersData);
             }
         }
     }

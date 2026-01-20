@@ -1,14 +1,13 @@
 #ifndef YACCP_RECORDING_RECORDERS_CAM_WORKER_HPP
 #define YACCP_RECORDING_RECORDERS_CAM_WORKER_HPP
-#include <filesystem>
-#include <mutex>
-
-#include <opencv2/objdetect/aruco_detector.hpp>
 #include "../../config/recording.hpp"
+
+// #include <filesystem>
+#include <mutex>
 
 namespace YACCP {
     struct CamData;
-    struct VerifyTask;
+    // struct VerifyTask;
     /**
      * @brief Simple enum to represent different camera worker types.
      */
@@ -45,12 +44,12 @@ namespace YACCP {
         /**
          * @brief Function to list available camera sources.
          */
-        virtual void listAvailableSources();
+        static void listAvailableSources();
 
         /**
          * @brief Function to start the camera worker.
          */
-        virtual void start();
+        virtual void start() = 0;
 
         virtual ~CameraWorker() = default;
 

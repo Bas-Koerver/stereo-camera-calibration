@@ -27,7 +27,7 @@ namespace YACCP::CLI {
         CalibrationCmds calibrationCmds{};
     };
 
-    void addCli(CliCmdConfig &cliCmdConfig, CliCmds &cliCmds);
+    void addCli(CliCmdConfig& cliCmdConfig, CliCmds& cliCmds);
 } // YACCP::CLI
 
 
