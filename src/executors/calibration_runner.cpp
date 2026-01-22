@@ -13,10 +13,23 @@ namespace YACCP::Executor {
         const std::filesystem::path dataPath{path / "data"};
         std::filesystem::path jobPath = dataPath / cliCmdConfig.calibrationCmdConfig.jobId;
 
-        Config::FileConfig fileConfig;
+        Utility::checkJobPath(dataPath, cliCmdConfig.calibrationCmdConfig.jobId);
+
+        // Check if the job has verified images
+        if (!Utility::isNonEmptyDirectory(jobPath / "images" / "verified")) {
+            throw std::runtime_error("No verified images found for job: " + cliCmdConfig.calibrationCmdConfig.jobId);
+        }
+
         // Load config from JSON file
-        nlohmann::json j = Utility::loadJsonFromFile(jobPath, "job_data.json");
+        Config::FileConfig fileConfig;
+
+        nlohmann::json j = Utility::loadJobDataFromFile(jobPath);
         j.at("config").get_to(fileConfig);
+
+        std::vector<CamData> camDatas(fileConfig.recordingConfig.workers.size());
+        for (auto& [key, obj] : j.at("cams").items()) {
+            camDatas[obj.at("camId").get<int>()].info = obj.get<CamData::Info>();
+        }
 
         // Variable setup based on config.
         cv::aruco::Dictionary dictionary{
@@ -32,14 +45,18 @@ namespace YACCP::Executor {
         };
         cv::aruco::CharucoDetector charucoDetector(board, charucoParams, detParams);
 
-        CameraCalibration cameraCalibration(charucoDetector, dataPath, fileConfig.detectionConfig.cornerMin);
+        // CameraCalibration cameraCalibration(charucoDetector, dataPath, fileConfig.detectionConfig.cornerMin);
 
         if (*cliCmds.calibrationCmds.mono) {
-            cameraCalibration.monoCalibrate(cliCmdConfig.calibrationCmdConfig.jobId);
+            // cameraCalibration.monoCalibrate(cliCmdConfig.calibrationCmdConfig.jobId);
+            Calibration::monoCalibrate(charucoDetector, camDatas, fileConfig, jobPath);
         } else if (*cliCmds.calibrationCmds.stereo) {
             std::cout << "stereo calibration called\n";
         } else {
             std::cout << "base calibration called\n";
         }
+
+        // Save JSON to file.
+        Utility::saveJobDataToFile(jobPath, fileConfig, camDatas);
     }
 } // YACCP::Executor
