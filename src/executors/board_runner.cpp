@@ -47,8 +47,7 @@ namespace YACCP::Executor {
             CreateBoard::charuco(fileConfig, cliCmdConfig.boardCreationCmdConfig, jobPath);
 
             // Save the board creation variables to a JSON
-            std::vector<CamData> empty{};
-            Utility::saveJobDataToFile(jobPath, fileConfig, empty);
+            Utility::saveJobDataToFile(jobPath, fileConfig);
         }
     }
 } // YACCP::Executor

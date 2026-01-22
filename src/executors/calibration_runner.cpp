@@ -31,6 +31,8 @@ namespace YACCP::Executor {
             camDatas[obj.at("camId").get<int>()].info = obj.get<CamData::Info>();
         }
 
+        std::vector<StereoCalibData> stereoCalibDatas;
+
         // Variable setup based on config.
         cv::aruco::Dictionary dictionary{
             cv::aruco::getPredefinedDictionary(fileConfig.detectionConfig.openCvDictionaryId)
@@ -45,18 +47,16 @@ namespace YACCP::Executor {
         };
         cv::aruco::CharucoDetector charucoDetector(board, charucoParams, detParams);
 
-        // CameraCalibration cameraCalibration(charucoDetector, dataPath, fileConfig.detectionConfig.cornerMin);
-
         if (*cliCmds.calibrationCmds.mono) {
             // cameraCalibration.monoCalibrate(cliCmdConfig.calibrationCmdConfig.jobId);
             Calibration::monoCalibrate(charucoDetector, camDatas, fileConfig, jobPath);
         } else if (*cliCmds.calibrationCmds.stereo) {
-            std::cout << "stereo calibration called\n";
+            Calibration::pairWiseStereoCalibrate(charucoDetector, camDatas, stereoCalibDatas, fileConfig, jobPath);
         } else {
             std::cout << "base calibration called\n";
         }
 
         // Save JSON to file.
-        Utility::saveJobDataToFile(jobPath, fileConfig, camDatas);
+        Utility::saveJobDataToFile(jobPath, fileConfig, &camDatas, &stereoCalibDatas);
     }
 } // YACCP::Executor

@@ -34,7 +34,6 @@ namespace YACCP::Executor {
         } else if (cliCmdConfig.recordingCmdConfig.showAvailableJobs) {
             CameraWorker::listJobs(dataPath);
         } else {
-
             std::filesystem::path jobPath;
             Config::FileConfig fileConfig;
             // Get the current video mode of the primary monitor.
@@ -57,7 +56,8 @@ namespace YACCP::Executor {
                         "The most recent job ID already has recoding data, creating a new job and copying job_config.json from previous one. \n";
                     jobPath = dataPath / ("job_" + dateTime.str());
                     std::filesystem::create_directories(jobPath);
-                    std::filesystem::copy(jobPathMostRecent / GlobalVariables::jobDataFileName, jobPath / GlobalVariables::jobDataFileName);
+                    std::filesystem::copy(jobPathMostRecent / GlobalVariables::jobDataFileName,
+                                          jobPath / GlobalVariables::jobDataFileName);
 
                     // Load config from JSON file
                     nlohmann::json j = Utility::loadJobDataFromFile(jobPath);
@@ -67,7 +67,6 @@ namespace YACCP::Executor {
                     YACCP::Config::loadConfig(tomlConfig, path);
 
                     fileConfig.viewingConfig = tomlConfig.viewingConfig;
-
                 } else {
                     jobPath = jobPathMostRecent;
                     Config::FileConfig jsonConfig;
@@ -82,8 +81,8 @@ namespace YACCP::Executor {
                     if (std::tie(fileConfig.boardConfig.boardSize, fileConfig.detectionConfig.openCvDictionaryId) !=
                         std::tie(jsonConfig.boardConfig.boardSize, jsonConfig.detectionConfig.openCvDictionaryId)) {
                         std::cerr << "Warning configured TOML does not coincide with stored JSON\n"
-                                     "This is a warning just to inform you that JSON config will be used for board setup\n";
-                        }
+                            "This is a warning just to inform you that JSON config will be used for board setup\n";
+                    }
                     fileConfig.boardConfig.boardSize = jsonConfig.boardConfig.boardSize;
                     fileConfig.detectionConfig.openCvDictionaryId = jsonConfig.detectionConfig.openCvDictionaryId;
                 }
@@ -91,11 +90,13 @@ namespace YACCP::Executor {
                 jobPath = dataPath / cliCmdConfig.recordingCmdConfig.jobId;
                 Config::FileConfig tomlConfig;
                 if (!is_directory(jobPath)) {
-                    std::cerr << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath << "\n";
+                    std::cerr << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath <<
+                        "\n";
                 }
 
                 if (Utility::isNonEmptyDirectory(jobPath / "images" / "raw")) {
-                    std::cout << "There is already recording data present for this job ID, do you want to override it?  (y/n): \n";
+                    std::cout <<
+                        "There is already recording data present for this job ID, do you want to override it?  (y/n): \n";
                 }
 
                 if (Utility::askYesNo()) {
@@ -152,19 +153,19 @@ namespace YACCP::Executor {
                                if constexpr (std::is_same_v<T, Config::Basler>) {
                                    cameraWorkers[index] =
                                        std::make_unique<BaslerCamWorker>(stopSource,
-                                                                                camDatas,
-                                                                                fileConfig.recordingConfig,
-                                                                                backend,
-                                                                                index,
-                                                                                jobPath);
+                                                                         camDatas,
+                                                                         fileConfig.recordingConfig,
+                                                                         backend,
+                                                                         index,
+                                                                         jobPath);
                                } else if constexpr (std::is_same_v<T, Config::Prophesee>) {
                                    cameraWorkers[index] =
                                        std::make_unique<PropheseeCamWorker>(stopSource,
-                                                                                   camDatas,
-                                                                                   fileConfig.recordingConfig,
-                                                                                   backend,
-                                                                                   index,
-                                                                                   jobPath);
+                                                                            camDatas,
+                                                                            fileConfig.recordingConfig,
+                                                                            backend,
+                                                                            index,
+                                                                            jobPath);
                                }
                            },
                            fileConfig.recordingConfig.workers[i].configBackend);
@@ -241,9 +242,8 @@ namespace YACCP::Executor {
 
             // Create a JSON object with all information on this job,
             // that includes the configured parameters in the config.toml and information about the job itself.
-            Utility::saveJobDataToFile(jobPath, fileConfig, camDatas);
+            Utility::saveJobDataToFile(jobPath, fileConfig, &camDatas);
         }
         return 0;
     }
-
 } // YACCP::Executor

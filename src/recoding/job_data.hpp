@@ -151,6 +151,15 @@ namespace YACCP {
         RuntimeData runtimeData;
     };
 
+    struct StereoCalibData {
+        int camLeftId;
+        int camRightId;
+        cv::Mat rotationMatrix;
+        cv::Mat translationMatrix;
+        cv::Mat essentialMatrix;
+        cv::Mat fundamentalMatrix;
+    };
+
     inline void to_json(nlohmann::json& j, const CamData::ViewData& v) {
         j = {
             {"windowX", v.windowX},
@@ -223,6 +232,26 @@ namespace YACCP {
 
     inline void from_json(const nlohmann::json& j, CamData& c) {
         j.at("info").get_to(c.info);
+    }
+
+    inline void to_json(nlohmann::json& j, const StereoCalibData& s) {
+        j = {
+            {"camLeftId", s.camLeftId},
+            {"camRightId", s.camRightId},
+            {"rotationMatrix", matTo2dArray(s.rotationMatrix)},
+            {"translationMatrix", matTo1dArray(s.translationMatrix)},
+            {"essentialMatrix", matTo2dArray(s.essentialMatrix)},
+            {"fundamentalMatrix", matTo2dArray(s.fundamentalMatrix)}
+        };
+    }
+
+    inline void from_json(const nlohmann::json& j, StereoCalibData& s) {
+        s.camLeftId = j.at("camLeftId");
+        s.camRightId = j.at("camRightId");
+        s.rotationMatrix = matFrom2dArray(j.at("rotationMatrix"));
+        s.translationMatrix = matFrom1dArray(j.at("translationMatrix"));
+        s.essentialMatrix = matFrom2dArray(j.at("essentialMatrix"));
+        s.essentialMatrix = matFrom2dArray(j.at("essentialMatrix"));
     }
 }
 

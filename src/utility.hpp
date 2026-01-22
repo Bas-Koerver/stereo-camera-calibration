@@ -79,9 +79,12 @@ namespace YACCP::Utility {
 
     [[nodiscard]] nlohmann::json loadJobDataFromFile(const std::filesystem::path& path);
 
-    void saveJobDataToFile(const std::filesystem::path& jobPath, Config::FileConfig& fileConfig, std::vector<CamData>& camDatas);
+    void saveJobDataToFile(const std::filesystem::path& jobPath,
+                           Config::FileConfig& fileConfig,
+                           const std::vector<CamData>* camDatas = nullptr,
+                           const std::vector<StereoCalibData>* stereoCalibDatas = nullptr);
 
-    [[nodiscard]] nlohmann::json parseJsonFromFile(std::ifstream & file);
+    [[nodiscard]] nlohmann::json parseJsonFromFile(std::ifstream& file);
 
     [[nodiscard]] bool askYesNo();
 } // YACCP::Utility

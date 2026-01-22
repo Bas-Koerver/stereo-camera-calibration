@@ -70,12 +70,12 @@ namespace YACCP::Utility {
 
     void checkJobDataAvailable(const std::filesystem::path& jobPath) {
         if (!exists(jobPath / GlobalVariables::jobDataFileName)) {
-            throw std::runtime_error("No " + static_cast<std::string>(GlobalVariables::jobDataFileName) + " was found.");
+            throw std::runtime_error(
+                "No " + static_cast<std::string>(GlobalVariables::jobDataFileName) + " was found.");
         }
     }
 
     nlohmann::json loadJobDataFromFile(const std::filesystem::path& path) {
-
         checkJobDataAvailable(path);
 
         std::ifstream file{openFile(path, GlobalVariables::jobDataFileName)};
@@ -93,22 +93,36 @@ namespace YACCP::Utility {
     }
 
     void saveJobDataToFile(const std::filesystem::path& jobPath,
-                        Config::FileConfig& fileConfig,
-                        std::vector<CamData>& camDatas) {
+                           Config::FileConfig& fileConfig,
+                           const std::vector<CamData>* camDatas,
+                           const std::vector<StereoCalibData>* stereoCalibDatas) {
         // Create JSON object with all information on this job,
         // that includes the configured parameters in the config.toml and information about the job itself.
         std::cout << "\nWriting job_data.json\n";
         nlohmann::json j;
         j["openCv"] = CV_VERSION;
         j["NLOHMANN_JSON"] = std::format("{}.{}.{}",
-                                      NLOHMANN_JSON_VERSION_MAJOR,
-                                      NLOHMANN_JSON_VERSION_MINOR,
-                                      NLOHMANN_JSON_VERSION_PATCH);
+                                         NLOHMANN_JSON_VERSION_MAJOR,
+                                         NLOHMANN_JSON_VERSION_MINOR,
+                                         NLOHMANN_JSON_VERSION_PATCH);
         j["config"] = fileConfig;
         j["cams"] = nlohmann::json::object();
+        j["stereoCalib"] = nlohmann::json::object();
 
-        for (auto i{0}; i < camDatas.size(); ++i) {
-            j["cams"]["cam_" + std::to_string(i)] = camDatas[i].info;
+        if (camDatas) {
+            for (auto i{0}; i < camDatas->size(); ++i) {
+                const auto& [info, runtimeData]{camDatas->at(i)};
+                j["cams"]["cam_" + std::to_string(i)] = info;
+            }
+        }
+
+        if (stereoCalibDatas) {
+            for (auto i{0}; i < stereoCalibDatas->size(); ++i) {
+                auto& stereoCalibData = stereoCalibDatas->at(i);
+                const int leftId = stereoCalibData.camLeftId;
+                const int rightId = stereoCalibData.camRightId;
+                j["stereoCalib"][std::to_string(leftId) + "_" + std::to_string(rightId)] = stereoCalibData;
+            }
         }
 
         // Save JSON to a file.

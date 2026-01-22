@@ -13,25 +13,12 @@ namespace YACCP::Calibration {
                        std::vector<CamData>& camDatas,
                        const Config::FileConfig& fileConfig,
                        const std::filesystem::path& jobPath);
-}
 
-namespace YACCP {
-    class CameraCalibration {
-    public:
-        CameraCalibration(const cv::aruco::CharucoDetector& charucoDetector,
-                          const std::filesystem::path& dataPath,
-                          float cornerMin);
-
-        void monoCalibrate(const std::string& jobName);
-
-        void stereoCalibrate(const std::string& jobName);
-
-    private:
-        const cv::aruco::CharucoDetector charucoDetector_;
-        const std::filesystem::path& dataPath_;
-        std::filesystem::path jobPath_{};
-        const float cornerMin_;
-    };
+    void pairWiseStereoCalibrate(const cv::aruco::CharucoDetector& charucoDetector,
+                                 std::vector<CamData>& camDatas,
+                                 std::vector<StereoCalibData>& stereoCalibDatas,
+                                 const Config::FileConfig& fileConfig,
+                                 const std::filesystem::path& jobPath);
 }
 
 
