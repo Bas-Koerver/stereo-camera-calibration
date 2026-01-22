@@ -35,12 +35,12 @@ namespace YACCP::Executor {
                 // Check whether the given job exists.
                 if (!is_directory(jobPath)) {
                     std::stringstream ss;
-                    ss << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath << "\n";
+                    ss << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath;
                     throw std::runtime_error(ss.str());
                 }
 
                 // Load config from JSON file
-                nlohmann::json j = YACCP::Utility::loadJsonFromFile(jobPath, "job_data.json");
+                nlohmann::json j = Utility::loadJobDataFromFile(jobPath);
                 j.at("config").get_to(fileConfig);
             }
 
@@ -48,7 +48,7 @@ namespace YACCP::Executor {
 
             // Save the board creation variables to a JSON
             std::vector<CamData> empty{};
-            Utility::saveJsonToFile(jobPath, fileConfig, empty);
+            Utility::saveJobDataToFile(jobPath, fileConfig, empty);
         }
     }
 } // YACCP::Executor

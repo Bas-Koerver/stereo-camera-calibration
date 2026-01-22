@@ -1,10 +1,13 @@
 #include "utility.hpp"
 
+#include "global_variables/program_defaults.hpp"
+
 #include <filesystem>
 #include <fstream>
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/objdetect/aruco_detector.hpp>
+
 
 namespace YACCP::Utility {
     void clearScreen() {
@@ -59,9 +62,23 @@ namespace YACCP::Utility {
         return file;
     }
 
-    nlohmann::json loadJsonFromFile(const std::filesystem::path& path, const std::string& fileName) {
+    void checkJobPath(const std::filesystem::path& dataPath, const std::string& jobId) {
+        if (!exists(dataPath / jobId)) {
+            throw std::runtime_error("Job: " + jobId + " does not exist in the given path: " + dataPath.string());
+        }
+    }
 
-        std::ifstream file{openFile(path, fileName)};
+    void checkJobDataAvailable(const std::filesystem::path& jobPath) {
+        if (!exists(jobPath / GlobalVariables::jobDataFileName)) {
+            throw std::runtime_error("No " + static_cast<std::string>(GlobalVariables::jobDataFileName) + " was found.");
+        }
+    }
+
+    nlohmann::json loadJobDataFromFile(const std::filesystem::path& path) {
+
+        checkJobDataAvailable(path);
+
+        std::ifstream file{openFile(path, GlobalVariables::jobDataFileName)};
 
         nlohmann::json j;
         try {
@@ -75,7 +92,7 @@ namespace YACCP::Utility {
         return j;
     }
 
-    void saveJsonToFile(const std::filesystem::path& jobPath,
+    void saveJobDataToFile(const std::filesystem::path& jobPath,
                         Config::FileConfig& fileConfig,
                         std::vector<CamData>& camDatas) {
         // Create JSON object with all information on this job,
@@ -95,7 +112,7 @@ namespace YACCP::Utility {
         }
 
         // Save JSON to a file.
-        std::ofstream file(jobPath / "job_data.json");
+        std::ofstream file(jobPath / GlobalVariables::jobDataFileName);
         file << j.dump(4);
     }
 

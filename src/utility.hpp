@@ -73,9 +73,13 @@ namespace YACCP::Utility {
 
     [[nodiscard]] std::ifstream openFile(const std::filesystem::path& path, const std::string& fileName);
 
-    [[nodiscard]] nlohmann::json loadJsonFromFile(const std::filesystem::path& path, const std::string& fileName);
+    void checkJobPath(const std::filesystem::path& dataPath, const std::string& jobId);
 
-    void saveJsonToFile(const std::filesystem::path& jobPath, Config::FileConfig& fileConfig, std::vector<CamData>& camDatas);
+    void checkJobDataAvailable(const std::filesystem::path& jobPath);
+
+    [[nodiscard]] nlohmann::json loadJobDataFromFile(const std::filesystem::path& path);
+
+    void saveJobDataToFile(const std::filesystem::path& jobPath, Config::FileConfig& fileConfig, std::vector<CamData>& camDatas);
 
     [[nodiscard]] nlohmann::json parseJsonFromFile(std::ifstream & file);
 

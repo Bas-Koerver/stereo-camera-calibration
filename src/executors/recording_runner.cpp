@@ -2,6 +2,8 @@
 
 #include "../utility.hpp"
 
+#include "../global_variables/program_defaults.hpp"
+
 // #include "../recoding/detection_validator.hpp"
 // #include "../recoding/job_data.hpp"
 // #include "../recoding/video_viewer.hpp"
@@ -55,10 +57,10 @@ namespace YACCP::Executor {
                         "The most recent job ID already has recoding data, creating a new job and copying job_config.json from previous one. \n";
                     jobPath = dataPath / ("job_" + dateTime.str());
                     std::filesystem::create_directories(jobPath);
-                    std::filesystem::copy(jobPathMostRecent / "job_data.json", jobPath / "job_data.json");
+                    std::filesystem::copy(jobPathMostRecent / GlobalVariables::jobDataFileName, jobPath / GlobalVariables::jobDataFileName);
 
                     // Load config from JSON file
-                    nlohmann::json j = Utility::loadJsonFromFile(jobPath, "job_data.json");
+                    nlohmann::json j = Utility::loadJobDataFromFile(jobPath);
                     j.at("config").get_to(fileConfig);
 
                     // Load config from TOML file
@@ -71,7 +73,7 @@ namespace YACCP::Executor {
                     Config::FileConfig jsonConfig;
 
                     // Load config from JSON file
-                    nlohmann::json j = Utility::loadJsonFromFile(jobPath, "job_data.json");
+                    nlohmann::json j = Utility::loadJobDataFromFile(jobPath);
                     j.at("config").get_to(jsonConfig);
 
                     // Load config from TOML file
@@ -104,7 +106,7 @@ namespace YACCP::Executor {
                 }
 
                 // Load config from JSON file
-                nlohmann::json j = Utility::loadJsonFromFile(jobPath, "job_data.json");
+                nlohmann::json j = Utility::loadJobDataFromFile(jobPath);
                 j.at("config").get_to(fileConfig);
 
                 // Load config from TOML file
@@ -239,7 +241,7 @@ namespace YACCP::Executor {
 
             // Create a JSON object with all information on this job,
             // that includes the configured parameters in the config.toml and information about the job itself.
-            Utility::saveJsonToFile(jobPath, fileConfig, camDatas);
+            Utility::saveJobDataToFile(jobPath, fileConfig, camDatas);
         }
         return 0;
     }

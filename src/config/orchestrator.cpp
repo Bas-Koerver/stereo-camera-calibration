@@ -1,5 +1,7 @@
 #include "orchestrator.hpp"
 
+#include "../global_variables/program_defaults.hpp"
+
 #include "../recoding/recorders/camera_worker.hpp"
 
 namespace YACCP::Config {
@@ -7,10 +9,10 @@ namespace YACCP::Config {
         // Load TOML configuration file.
         toml::table tbl;
         try {
-            tbl = toml::parse_file((path / "config.toml").string());
+            tbl = toml::parse_file((path / GlobalVariables::configFileName).string());
         } catch (const toml::parse_error& err) {
             std::stringstream ss{};
-            ss << err.description() << "\n At: " << err.source() << "\n";
+            ss << err.description() << "\n At: " << err.source();
             throw std::runtime_error(ss.str());
         }
 
@@ -24,10 +26,10 @@ namespace YACCP::Config {
         // Load TOML configuration file.
         toml::table tbl;
         try {
-            tbl = toml::parse_file((path / "config.toml").string());
+            tbl = toml::parse_file((path / GlobalVariables::configFileName).string());
         } catch (const toml::parse_error& err) {
             std::stringstream ss{};
-            ss << err.description() << "\n At: " << err.source() << "\n";
+            ss << err.description() << "\n At: " << err.source();
             throw std::runtime_error(ss.str());
         }
 

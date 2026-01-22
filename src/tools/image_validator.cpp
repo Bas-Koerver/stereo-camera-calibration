@@ -54,15 +54,11 @@ namespace YACCP {
                                         int resolutionHeight,
                                         const std::filesystem::path& dataPath,
                                         const std::string& jobId) {
+        Utility::checkJobPath(dataPath, jobId);
         jobPath_ = dataPath / jobId;
-        if (!exists(jobPath_)) {
-            std::stringstream ss;
-            ss << "Job: " << jobId << " does not exist in the given path: " << dataPath << "\n";
-            throw std::runtime_error(ss.str());
-        }
 
         if (!Utility::isNonEmptyDirectory(jobPath_ / "images" / "raw")) {
-            throw std::runtime_error("\nNo raw images found for job: " + jobId + "\n");
+            throw std::runtime_error("\nNo raw images found for job: " + jobId);
         }
 
         std::vector<std::filesystem::path> cams;
@@ -81,11 +77,7 @@ namespace YACCP {
 
         std::ranges::sort(images);
 
-        if (!exists(jobPath_ / "job_data.json")) {
-            throw std::runtime_error("No camera data was found.\nStopping! \n");
-        }
-
-        nlohmann::json j = Utility::loadJsonFromFile(jobPath_, "job_data.json");
+        nlohmann::json j = Utility::loadJobDataFromFile(jobPath_);
         j.at("config").get_to(fileConfig);
 
         std::vector<CamData::Info> camDatas(cams.size());
@@ -96,7 +88,6 @@ namespace YACCP {
 
         Metavision::FrameComposer frameComposer;
         for (const auto& cam : camDatas) {
-
             const int topLeftX = cam.ViewData.windowX;
             const int topLeftY = cam.ViewData.windowY;
             const unsigned width = cam.resolution.width;

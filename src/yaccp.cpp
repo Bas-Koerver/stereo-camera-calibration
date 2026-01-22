@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
 
     // Try to initialise GLFW
     if (!glfwInit()) {
-        std::cerr << "Failed to initialize GLFW." << std::endl;
+        std::cerr << "Failed to initialize GLFW.\n";
         raise(SIGABRT);
     }
 

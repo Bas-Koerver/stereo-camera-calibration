@@ -66,10 +66,9 @@ add_executable(
         src/global_variables/cli_defaults.hpp
         src/executors/board_runner.cpp src/executors/board_runner.hpp
         src/executors/recording_runner.cpp src/executors/recording_runner.hpp
-        src/executors/validation_runner.cpp
-        src/executors/validation_runner.hpp
-        src/executors/calibration_runner.cpp
-        src/executors/calibration_runner.hpp
+        src/executors/validation_runner.cpp src/executors/validation_runner.hpp
+        src/executors/calibration_runner.cpp src/executors/calibration_runner.hpp
+
 )
 
 target_link_libraries(

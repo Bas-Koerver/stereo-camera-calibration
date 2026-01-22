@@ -3,7 +3,6 @@
 
 namespace YACCP::GlobalVariables {
     // Default boardCreationCmd variables.
-
     inline constexpr auto generateImage{true};
     inline constexpr auto generateVideo{false};
 }
