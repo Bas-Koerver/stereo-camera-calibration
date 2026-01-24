@@ -1,5 +1,5 @@
-#ifndef YACCP_TOOLS_CREATE_BOARD
-#define YACCP_TOOLS_CREATE_BOARD
+#ifndef YACCP_SRC_TOOLS_CREATE_BOARD
+#define YACCP_SRC_TOOLS_CREATE_BOARD
 #include "../cli/board_creation.hpp"
 
 #include "../config/orchestrator.hpp"
@@ -12,4 +12,4 @@ namespace YACCP::CreateBoard {
                  const std::filesystem::path& jobPath);
 }
 
-#endif // YACCP_TOOLS_CREATE_BOARD
+#endif // YACCP_SRC_TOOLS_CREATE_BOARD

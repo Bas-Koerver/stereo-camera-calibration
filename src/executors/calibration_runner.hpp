@@ -1,5 +1,5 @@
-#ifndef YACCP_EXECUTOR_CALIBRATION_RUNNER_HPP
-#define YACCP_EXECUTOR_CALIBRATION_RUNNER_HPP
+#ifndef YACCP_SRC_EXECUTOR_CALIBRATION_RUNNER_HPP
+#define YACCP_SRC_EXECUTOR_CALIBRATION_RUNNER_HPP
 #include "../cli/orchestrator.hpp"
 
 namespace YACCP::Executor {
@@ -9,4 +9,4 @@ namespace YACCP::Executor {
                         const std::stringstream& dateTime);
 } // YACCP::Executor
 
-#endif //YACCP_EXECUTOR_CALIBRATION_RUNNER_HPP
+#endif //YACCP_SRC_EXECUTOR_CALIBRATION_RUNNER_HPP

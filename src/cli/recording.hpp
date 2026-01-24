@@ -1,5 +1,5 @@
-#ifndef YACCP_CLI_RECORDING_HPP
-#define YACCP_CLI_RECORDING_HPP
+#ifndef YACCP_SRC_CLI_RECORDING_HPP
+#define YACCP_SRC_CLI_RECORDING_HPP
 #include <CLI/App.hpp>
 
 namespace YACCP::CLI {
@@ -12,4 +12,4 @@ namespace YACCP::CLI {
     ::CLI::App* addRecordingCmd(::CLI::App & app, RecordingCmdConfig & config);
 } // namespace YACCP::CLI
 
-#endif // YACCP_CLI_RECORDING_HPP
+#endif // YACCP_SRC_CLI_RECORDING_HPP

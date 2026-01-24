@@ -1,5 +1,5 @@
-#ifndef YACCP_CLI_VALIDATION_HPP
-#define YACCP_CLI_VALIDATION_HPP
+#ifndef YACCP_SRC_CLI_VALIDATION_HPP
+#define YACCP_SRC_CLI_VALIDATION_HPP
 #include <CLI/App.hpp>
 
 namespace YACCP::CLI {
@@ -11,4 +11,4 @@ namespace YACCP::CLI {
     ::CLI::App* addValidationCmd(::CLI::App & app, ValidationCmdConfig & config);
 } // namespace YACCP::CLI
 
-#endif // YACCP_CLI_VALIDATION_HPP
+#endif // YACCP_SRC_CLI_VALIDATION_HPP

@@ -1,5 +1,5 @@
-#ifndef YACCP_CAMERA_CALIBRATION_HPP
-#define YACCP_CAMERA_CALIBRATION_HPP
+#ifndef YACCP_SRC_CAMERA_CALIBRATION_HPP
+#define YACCP_SRC_CAMERA_CALIBRATION_HPP
 #include "config/orchestrator.hpp"
 
 #include "recoding/job_data.hpp"
@@ -22,4 +22,4 @@ namespace YACCP::Calibration {
 }
 
 
-#endif //YACCP_CAMERA_CALIBRATION_HPP
+#endif //YACCP_SRC_CAMERA_CALIBRATION_HPP

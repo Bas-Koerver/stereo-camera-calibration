@@ -25,7 +25,7 @@ namespace YACCP::Executor {
 
                 std::cout << "No job ID given, creating a new one.\n";
                 jobPath = dataPath / ("job_" + dateTime.str());
-                std::filesystem::create_directories(jobPath);
+                (void)std::filesystem::create_directories(jobPath);
             } else {
                 // If job ID is given, load the JSON config from the given job ID
                 // Otherwise generate a board for the given job ID
@@ -33,14 +33,13 @@ namespace YACCP::Executor {
 
                 // Check whether the given job exists.
                 if (!is_directory(jobPath)) {
-                    std::stringstream ss;
-                    ss << "Job: " << jobPath.string() << " does not exist in the given path: " << dataPath;
-                    throw std::runtime_error(ss.str());
+                    throw std::runtime_error(
+                        "Job: " + jobPath.string() + " does not exist in the given path: " + dataPath.string());
                 }
 
                 // Load config from JSON file
                 nlohmann::json j = Utility::loadJobDataFromFile(jobPath);
-                j.at("config").get_to(fileConfig);
+                (void)j.at("config").get_to(fileConfig);
             }
 
             CreateBoard::charuco(fileConfig, cliCmdConfig.boardCreationCmdConfig, jobPath);

@@ -1,5 +1,5 @@
-#ifndef YACCP_TOOLS_IMAGE_VALIDATOR_HPP
-#define YACCP_TOOLS_IMAGE_VALIDATOR_HPP
+#ifndef YACCP_SRC_TOOLS_IMAGE_VALIDATOR_HPP
+#define YACCP_SRC_TOOLS_IMAGE_VALIDATOR_HPP
 #include <filesystem>
 
 #include <metavision/sdk/core/utils/frame_composer.h>
@@ -28,4 +28,4 @@ namespace YACCP {
     };
 } // YACCP
 
-#endif //YACCP_TOOLS_IMAGE_VALIDATOR_HPP
+#endif //YACCP_SRC_TOOLS_IMAGE_VALIDATOR_HPP

@@ -1,5 +1,5 @@
-#ifndef YACCP_CONFIG_ORCHESTRATOR_HPP
-#define YACCP_CONFIG_ORCHESTRATOR_HPP
+#ifndef YACCP_SRC_CONFIG_ORCHESTRATOR_HPP
+#define YACCP_SRC_CONFIG_ORCHESTRATOR_HPP
 #include "board.hpp"
 #include "detection.hpp"
 #include "recording.hpp"
@@ -49,4 +49,4 @@ namespace YACCP::Config {
     void loadBoardConfig(FileConfig& config, const std::filesystem::path& path, bool boardCreation = true);
 } // YACCP::Config
 
-#endif //YACCP_CONFIG_ORCHESTRATOR_HPP
+#endif //YACCP_SRC_CONFIG_ORCHESTRATOR_HPP

@@ -1,5 +1,5 @@
-#ifndef YACCP_CONFIG_DETECTION_HPP
-#define YACCP_CONFIG_DETECTION_HPP
+#ifndef YACCP_SRC_CONFIG_DETECTION_HPP
+#define YACCP_SRC_CONFIG_DETECTION_HPP
 #include <nlohmann/json.hpp>
 
 #include <opencv2/objdetect/charuco_detector.hpp>
@@ -128,4 +128,4 @@ namespace YACCP::Config {
     void parseDetectionConfig(const toml::table& tbl, DetectionConfig& config);
 } // YACCP::Config
 
-#endif //YACCP_CONFIG_DETECTION_HPP
+#endif //YACCP_SRC_CONFIG_DETECTION_HPP

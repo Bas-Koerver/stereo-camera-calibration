@@ -1,5 +1,5 @@
-#ifndef YACCP_CONFIG_BOARD_HPP
-#define YACCP_CONFIG_BOARD_HPP
+#ifndef YACCP_SRC_CONFIG_BOARD_HPP
+#define YACCP_SRC_CONFIG_BOARD_HPP
 #include <nlohmann/json.hpp>
 
 #include <opencv2/core/types.hpp>
@@ -67,4 +67,4 @@ namespace YACCP::Config {
     void parseBoardConfig(const toml::table& tbl, BoardConfig& config, bool boardCreation);
 } // YACCP::Config
 
-#endif //YACCP_CONFIG_BOARD_HPP
+#endif //YACCP_SRC_CONFIG_BOARD_HPP

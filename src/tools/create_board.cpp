@@ -10,7 +10,9 @@
 namespace {
     void generateVideo(const cv::Mat& image, const cv::Size size, const std::filesystem::path& jobPath) {
         const std::string filename{(jobPath / YACCP::GlobalVariables::boardVideoFileName).string()};
-        const int codec{cv::VideoWriter::fourcc('a', 'v', 'c', '1')};
+
+        // H264 codec seems to work on most devices
+        const int codec{cv::VideoWriter::fourcc('h', '2', '6', '4')};
 
         cv::Mat imageBgr;
         cv::cvtColor(image, imageBgr, cv::COLOR_GRAY2BGR);
@@ -19,7 +21,7 @@ namespace {
         cv::VideoWriter writer(filename, codec, static_cast<double>(YACCP::GlobalVariables::videoFps), size, true);
 
         if (!writer.isOpened()) {
-            throw std::runtime_error{"Could not open the output video for write: " + filename + "\n"};
+            throw std::runtime_error{"Could not open the output video for writing: " + filename + "\n"};
         }
 
         // Ten-second video.
@@ -53,7 +55,6 @@ namespace YACCP::CreateBoard {
 
 
     // TODO: add different calibration patterns: https://github.com/opencv/opencv/blob/74addff3d065e53ce2ea16e2861d7711fb549780/samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp#L156
-
     void charuco(const Config::FileConfig& fileConfig,
                  const CLI::BoardCreationCmdConfig& boardCreationConfig,
                  const std::filesystem::path& jobPath) {
@@ -68,12 +69,12 @@ namespace YACCP::CreateBoard {
         };
 
         const int width{
-            fileConfig.boardConfig.boardSize.width * fileConfig.boardConfig.squarePixelLength + 2 * fileConfig.
-            boardConfig.marginSize
+            (fileConfig.boardConfig.boardSize.width * fileConfig.boardConfig.squarePixelLength) + (2 * fileConfig.
+                boardConfig.marginSize)
         };
         const int height{
-            fileConfig.boardConfig.boardSize.height * fileConfig.boardConfig.squarePixelLength + 2 * fileConfig.
-            boardConfig.marginSize
+            (fileConfig.boardConfig.boardSize.height * fileConfig.boardConfig.squarePixelLength) + (2 * fileConfig.
+                boardConfig.marginSize)
         };
         cv::Mat boardImage;
         const cv::Size imageSize(width, height);
@@ -83,8 +84,12 @@ namespace YACCP::CreateBoard {
                             fileConfig.boardConfig.marginSize,
                             fileConfig.boardConfig.borderBits);
 
-        if (boardCreationConfig.generateImage) cv::imwrite((jobPath / "board.png").string(), boardImage);
+        if (boardCreationConfig.generateImage) {
+            (void)cv::imwrite((jobPath / "board.png").string(), boardImage);
+        }
 
-        if (boardCreationConfig.generateVideo) generateVideo(boardImage, imageSize, jobPath);
+        if (boardCreationConfig.generateVideo) {
+            generateVideo(boardImage, imageSize, jobPath);
+        }
     }
 } // namespace YACCP

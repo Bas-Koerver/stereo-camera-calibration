@@ -6,8 +6,8 @@
 #include "utility.hpp"
 
 #include "executors/board_runner.hpp"
-#include "executors/recording_runner.hpp"
 #include "executors/calibration_runner.hpp"
+#include "executors/recording_runner.hpp"
 #include "executors/validation_runner.hpp"
 
 #include <csignal>
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     std::filesystem::path path = workingDir / cliCmdConfig.appCmdConfig.userPath;
     auto returnCode{0};
 
-    cliCmdConfig.boardCreationCmdConfig.showAvailableJobs = true;
+    cliCmdConfig.boardCreationCmdConfig.generateVideo = true;
     if (*cliCmds.boardCreationCmd || true) {
         try {
             YACCP::Executor::runBoardCreation(cliCmdConfig, path, dateTime);

@@ -1,5 +1,5 @@
-#ifndef YACCP_CLI_ORCHESTRATOR_HPP
-#define YACCP_CLI_ORCHESTRATOR_HPP
+#ifndef YACCP_SRC_CLI_ORCHESTRATOR_HPP
+#define YACCP_SRC_CLI_ORCHESTRATOR_HPP
 #include "board_creation.hpp"
 #include "calibration.hpp"
 #include "recording.hpp"
@@ -31,4 +31,4 @@ namespace YACCP::CLI {
 } // YACCP::CLI
 
 
-#endif //YACCP_CLI_ORCHESTRATOR_HPP
+#endif //YACCP_SRC_CLI_ORCHESTRATOR_HPP

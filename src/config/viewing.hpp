@@ -1,5 +1,5 @@
-#ifndef YACCP_CONFIG_VIEWING_HPP
-#define YACCP_CONFIG_VIEWING_HPP
+#ifndef YACCP_SRC_CONFIG_VIEWING_HPP
+#define YACCP_SRC_CONFIG_VIEWING_HPP
 #include <toml++/toml.hpp>
 
 namespace YACCP::Config {
@@ -10,4 +10,4 @@ namespace YACCP::Config {
     void parseViewingConfig(const toml::table& tbl, ViewingConfig& viewingConfig);
 } // YACCP::Config
 
-#endif //YACCP_CONFIG_VIEWING_HPP
+#endif //YACCP_SRC_CONFIG_VIEWING_HPP

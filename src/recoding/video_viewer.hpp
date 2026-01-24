@@ -1,5 +1,5 @@
-#ifndef YACCP_RECORDING_VIDEO_VIEWER_HPP
-#define YACCP_RECORDING_VIDEO_VIEWER_HPP
+#ifndef YACCP_SRC_RECORDING_VIDEO_VIEWER_HPP
+#define YACCP_SRC_RECORDING_VIDEO_VIEWER_HPP
 #include "recorders/camera_worker.hpp"
 
 #include <readerwriterqueue.h>
@@ -54,4 +54,4 @@ namespace YACCP {
     };
 } // YACCP
 
-#endif //YACCP_RECORDING_VIDEO_VIEWER_HPP
+#endif //YACCP_SRC_RECORDING_VIDEO_VIEWER_HPP

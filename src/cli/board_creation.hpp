@@ -1,5 +1,5 @@
-#ifndef YACCP_CLI_BOARD_CREATION_HPP
-#define YACCP_CLI_BOARD_CREATION_HPP
+#ifndef YACCP_SRC_CLI_BOARD_CREATION_HPP
+#define YACCP_SRC_CLI_BOARD_CREATION_HPP
 #include "../global_variables/cli_defaults.hpp"
 
 #include <CLI/App.hpp>
@@ -16,4 +16,4 @@ namespace YACCP::CLI {
     ::CLI::App* addBoardCreationCmd(::CLI::App & app, BoardCreationCmdConfig & config);
 } // namespace YACCP::CLI
 
-#endif // YACCP_CLI_BOARD_CREATION_HPP
+#endif // YACCP_SRC_CLI_BOARD_CREATION_HPP

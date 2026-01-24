@@ -1,5 +1,5 @@
-#ifndef YACCP_UTILITY_HPP
-#define YACCP_UTILITY_HPP
+#ifndef YACCP_SRC_UTILITY_HPP
+#define YACCP_SRC_UTILITY_HPP
 #include "config/orchestrator.hpp"
 
 #include "recoding/job_data.hpp"
@@ -96,4 +96,4 @@ namespace YACCP::Utility {
 } // YACCP::Utility
 
 
-#endif //YACCP_UTILITY_HPP
+#endif //YACCP_SRC_UTILITY_HPP

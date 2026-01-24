@@ -1,5 +1,5 @@
-#ifndef YACCP_CONFIG_RECORDING_HPP
-#define YACCP_CONFIG_RECORDING_HPP
+#ifndef YACCP_SRC_CONFIG_RECORDING_HPP
+#define YACCP_SRC_CONFIG_RECORDING_HPP
 #include <variant>
 
 #include <nlohmann/json.hpp>
@@ -124,4 +124,4 @@ namespace YACCP::Config {
     void parseRecordingConfig(const toml::table& tbl, RecordingConfig& config);
 } // YACCP::Config
 
-#endif //YACCP_CONFIG_RECORDING_HPP
+#endif //YACCP_SRC_CONFIG_RECORDING_HPP

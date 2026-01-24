@@ -86,21 +86,11 @@ namespace YACCP {
     }
 
 
-    std::tuple<int, int> getDims(GenApi::INodeMap& nodeMap) {
+    std::pair<int, int> getDims(GenApi::INodeMap& nodeMap) {
         return {
-            Pylon::CIntegerParameter(nodeMap, "Width").GetValue(),
-            Pylon::CIntegerParameter(nodeMap, "Height").GetValue()
+            static_cast<int>(Pylon::CIntegerParameter(nodeMap, "Width").GetValue()),
+            static_cast<int>(Pylon::CIntegerParameter(nodeMap, "Height").GetValue())
         };
-    }
-
-
-    std::tuple<int, int> BaslerCamWorker::getSetNodeMapParameters(GenApi::INodeMap& nodeMap) {
-        setPixelFormat(nodeMap);
-        // TODO: Make configurable.
-        setGainControl(nodeMap);
-        setTimingInterfaces(nodeMap);
-        setCounters(nodeMap);
-        return getDims(nodeMap);
     }
 
 
@@ -109,9 +99,9 @@ namespace YACCP {
                                      Config::RecordingConfig& recordingConfig,
                                      const Config::Basler& configBackend,
                                      const int index,
-                                     const std::filesystem::path& jobPath)
-        : CameraWorker(stopSource, camDatas, recordingConfig, index, jobPath),
-          configBackend_(configBackend) {
+                                     const std::filesystem::path& jobPath) :
+        CameraWorker(stopSource, camDatas, recordingConfig, index, jobPath),
+        configBackend_(configBackend) {
         Pylon::PylonInitialize();
         // TODO: Handle scenarios where the camera doesn't support external triggers
     }
@@ -265,5 +255,15 @@ namespace YACCP {
 
     BaslerCamWorker::~BaslerCamWorker() {
         Pylon::PylonTerminate();
+    }
+
+
+    std::pair<int, int> BaslerCamWorker::getSetNodeMapParameters(GenApi::INodeMap& nodeMap) {
+        setPixelFormat(nodeMap);
+        // TODO: Make configurable.
+        setGainControl(nodeMap);
+        setTimingInterfaces(nodeMap);
+        setCounters(nodeMap);
+        return getDims(nodeMap);
     }
 }

@@ -1,5 +1,5 @@
-#ifndef YACCP_RECORDING_JOB_DATA_HPP
-#define YACCP_RECORDING_JOB_DATA_HPP
+#ifndef YACCP_SRC_RECORDING_JOB_DATA_HPP
+#define YACCP_SRC_RECORDING_JOB_DATA_HPP
 #include "detection_validator.hpp"
 
 namespace YACCP {
@@ -271,4 +271,4 @@ namespace YACCP {
     }
 }
 
-#endif //YACCP_RECORDING_JOB_DATA_HPP
+#endif //YACCP_SRC_RECORDING_JOB_DATA_HPP

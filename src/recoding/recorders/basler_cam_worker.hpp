@@ -1,5 +1,5 @@
-#ifndef YACCP_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP
-#define YACCP_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP
+#ifndef YACCP_SRC_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP
+#define YACCP_SRC_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP
 #include "camera_worker.hpp"
 
 #include <pylon/PylonIncludes.h>
@@ -32,8 +32,8 @@ namespace YACCP {
 
         void setPixelFormat(GenApi::INodeMap& nodeMap);
 
-        [[nodiscard]] std::tuple<int, int> getSetNodeMapParameters(GenApi::INodeMap& nodeMap);
+        [[nodiscard]] std::pair<int, int> getSetNodeMapParameters(GenApi::INodeMap& nodeMap);
     };
 } // YACCP
 
-#endif //YACCP_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP
+#endif //YACCP_SRC_RECORDING_RECORDERS_BASLER_CAM_WORKER_HPP

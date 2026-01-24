@@ -1,5 +1,5 @@
-#ifndef YACCP_CLI_CALIBRATION_HPP
-#define YACCP_CLI_CALIBRATION_HPP
+#ifndef YACCP_SRC_CLI_CALIBRATION_HPP
+#define YACCP_SRC_CLI_CALIBRATION_HPP
 #include <CLI/App.hpp>
 
 namespace YACCP::CLI {
@@ -17,4 +17,4 @@ namespace YACCP::CLI {
     CalibrationCmds addCalibrationCmds(::CLI::App & app, CalibrationCmdConfig & config);
 } // namespace YACCP::CLI
 
-#endif // YACCP_CLI_CALIBRATION_HPP
+#endif // YACCP_SRC_CLI_CALIBRATION_HPP
