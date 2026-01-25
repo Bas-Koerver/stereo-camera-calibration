@@ -6,11 +6,13 @@ namespace YACCP {
     static nlohmann::json matTo2dArray(const cv::Mat& m) {
         CV_Assert(m.type() == CV_64F);
 
-        nlohmann::json out{nlohmann::json::array()};
+        nlohmann::json out = nlohmann::json::array();
 
         for (auto r{0}; r < m.rows; ++r) {
             nlohmann::json row = nlohmann::json::array();
-            for (auto c{0}; c < m.cols; ++c) row.push_back(m.at<double>(r, c));
+            for (auto c{0}; c < m.cols; ++c) {
+                row.push_back(m.at<double>(r, c));
+            }
             out.push_back(row);
         }
 

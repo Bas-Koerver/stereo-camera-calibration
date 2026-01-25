@@ -3,6 +3,8 @@
 #include "job_data.hpp"
 #include "../utility.hpp"
 
+#include <thread>
+
 #include <metavision/sdk/ui/utils/event_loop.h>
 #include <metavision/sdk/ui/utils/window.h>
 

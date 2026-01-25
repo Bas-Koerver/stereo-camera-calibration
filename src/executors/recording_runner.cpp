@@ -7,6 +7,8 @@
 #include "../recoding/recorders/basler_cam_worker.hpp"
 #include "../recoding/recorders/prophesee_cam_worker.hpp"
 
+#include <thread>
+
 #include <GLFW/glfw3.h>
 
 namespace YACCP::Executor {

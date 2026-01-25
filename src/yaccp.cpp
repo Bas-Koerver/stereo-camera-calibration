@@ -73,7 +73,8 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (*cliCmds.calibrationCmds.calibration) {
+        cliCmdConfig.calibrationCmdConfig.jobId = "job_2026-01-21_17-08-42";
+        if (*cliCmds.calibrationCmds.calibration || true) {
             try {
                 YACCP::Executor::runCalibration(cliCmdConfig, cliCmds, path, dateTime);
             }

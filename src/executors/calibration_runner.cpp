@@ -52,7 +52,7 @@ namespace YACCP::Executor {
         };
         cv::aruco::CharucoDetector charucoDetector(board, charucoParams, detParams);
 
-        if (*cliCmds.calibrationCmds.mono) {
+        if (*cliCmds.calibrationCmds.mono || true) {
             // cameraCalibration.monoCalibrate(cliCmdConfig.calibrationCmdConfig.jobId);
             Calibration::monoCalibrate(charucoDetector, camDatas, fileConfig, jobPath);
         } else if (*cliCmds.calibrationCmds.stereo) {

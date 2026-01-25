@@ -2,7 +2,7 @@
 #define YACCP_SRC_RECORDING_RECORDERS_CAM_WORKER_HPP
 #include "../../config/recording.hpp"
 
-#include <mutex>
+#include <stop_token>
 
 namespace YACCP {
     struct CamData;
