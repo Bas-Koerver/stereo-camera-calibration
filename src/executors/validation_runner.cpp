@@ -9,7 +9,7 @@
 #include <GLFW/glfw3.h>
 
 namespace YACCP::Executor {
-    void runValidation(CLI::CliCmdConfig& cliCmdConfig, std::filesystem::path path, const std::stringstream& dateTime) {
+    void runValidation(CLI::CliCmdConfig& cliCmdConfig, std::filesystem::path path, const std::string& dateTime) {
         const std::filesystem::path dataPath{path / "data"};
         if (cliCmdConfig.validationCmdConfig.showAvailableJobs) {
             ImageValidator::listJobs(dataPath);

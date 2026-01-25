@@ -3,7 +3,7 @@
 #include "../cli/orchestrator.hpp"
 
 namespace YACCP::Executor {
-    void runValidation(CLI::CliCmdConfig& cliCmdConfig, std::filesystem::path path, const std::stringstream& dateTime);
+    void runValidation(CLI::CliCmdConfig& cliCmdConfig, std::filesystem::path path, const std::string& dateTime);
 } // YACCP::Executor
 
 #endif //YACCP_SRC_EXECUTOR_VALIDATION_RUNNER_HPP

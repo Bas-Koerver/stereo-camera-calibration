@@ -8,7 +8,7 @@
 namespace YACCP::Executor {
     int runBoardCreation(const CLI::CliCmdConfig& cliCmdConfig,
                          const std::filesystem::path& path,
-                         const std::stringstream& dateTime) {
+                         const std::string& dateTime) {
         const std::filesystem::path dataPath{path / "data"};
 
         // Show jobs that are missing a board image and/or video.
@@ -25,7 +25,7 @@ namespace YACCP::Executor {
                 Config::loadBoardConfig(fileConfig, path, true);
 
                 std::cout << "No job ID given, creating a new one.\n";
-                jobPath = dataPath / ("job_" + dateTime.str());
+                jobPath = dataPath / ("job_" + dateTime);
                 (void)std::filesystem::create_directories(jobPath);
             } else {
                 // If job ID is given, load the JSON config from the given job ID

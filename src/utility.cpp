@@ -4,6 +4,8 @@
 
 #include <filesystem>
 #include <fstream>
+#include <chrono>
+#include <format>
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/objdetect/aruco_detector.hpp>
@@ -38,13 +40,27 @@ namespace YACCP::Utility {
     }
 
 
-    std::_Timeobj<char, const tm*> getCurrentDateTime() {
+    std::string getCurrentDateTime() {
         // Get the current date and time.
         const auto now = std::chrono::system_clock::now();
-        const auto localTime = std::chrono::system_clock::to_time_t(now);
+        const std::time_t localTime = std::chrono::system_clock::to_time_t(now);
+
+        std::tm tmUtc{};
+
+#if defined(_WIN32)
+        if (gmtime_s(&tmUtc, &localTime) != 0) {
+            throw std::runtime_error("gmtime_s failed");
+        }
+#else
+        if (gmtime_r(&localTime, &tmUtc) == nullptr) {
+            throw std::runtime_error("gmtime_r failed");
+        }
+#endif
 
         // Generate timestamp at UTC +0
-        return std::put_time(std::gmtime(&localTime), "%F_%H-%M-%S");
+        std::ostringstream oss;
+        oss << std::put_time(&tmUtc, "%F_%H-%M-%S");
+        return oss.str();
     }
 
 

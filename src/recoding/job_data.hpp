@@ -134,7 +134,7 @@ namespace YACCP {
             cv::Size resolution;
             bool isMaster;
 
-            ViewData ViewData;
+            ViewData viewData;
             CalibData calibData;
         };
 
@@ -221,7 +221,7 @@ namespace YACCP {
                 }
             },
             {"isMaster", i.isMaster},
-            {"view", i.ViewData},
+            {"view", i.viewData},
             {"calibration", i.calibData}
         };
     }
@@ -233,7 +233,7 @@ namespace YACCP {
         j.at("resolution").at("width").get_to(i.resolution.width);
         j.at("resolution").at("height").get_to(i.resolution.height);
         j.at("isMaster").get_to(i.isMaster);
-        j.at("view").get_to(i.ViewData);
+        j.at("view").get_to(i.viewData);
         if (j.contains("calibration") && !j.at("calibration").is_null()) j.at("calibration").get_to(i.calibData);
     }
 

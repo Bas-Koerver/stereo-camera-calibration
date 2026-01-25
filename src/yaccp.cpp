@@ -39,8 +39,8 @@ int main(int argc, char** argv) {
     /*
     * Global variable declaration
     */
-    std::stringstream dateTime;
-    dateTime << YACCP::Utility::getCurrentDateTime();
+    std::string dateTime;
+    dateTime = YACCP::Utility::getCurrentDateTime();
     auto workingDir = std::filesystem::current_path();
 
     std::filesystem::path path = workingDir / cliCmdConfig.appCmdConfig.userPath;

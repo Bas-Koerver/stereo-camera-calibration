@@ -21,7 +21,7 @@ namespace {
         cv::VideoWriter writer(filename, codec, static_cast<double>(YACCP::GlobalVariables::videoFps), size, true);
 
         if (!writer.isOpened()) {
-            throw std::runtime_error{"Could not open the output video for writing: " + filename + "\n"};
+            throw std::runtime_error("Could not open the output video for writing: " + filename + "\n");
         }
 
         // Ten-second video.

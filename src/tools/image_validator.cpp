@@ -109,8 +109,8 @@ namespace YACCP {
 
         Metavision::FrameComposer frameComposer;
         for (const auto& cam : camDatas) {
-            const int topLeftX = cam.ViewData.windowX;
-            const int topLeftY = cam.ViewData.windowY;
+            const int topLeftX = cam.viewData.windowX;
+            const int topLeftY = cam.viewData.windowY;
             const unsigned width = cam.resolution.width;
             const unsigned height = cam.resolution.height;
             camRefs.emplace_back(

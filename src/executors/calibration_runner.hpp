@@ -6,7 +6,7 @@ namespace YACCP::Executor {
     void runCalibration(CLI::CliCmdConfig& cliCmdConfig,
                         CLI::CliCmds& cliCmds,
                         std::filesystem::path path,
-                        const std::stringstream& dateTime);
+                        const std::string& dateTime);
 } // YACCP::Executor
 
 #endif //YACCP_SRC_EXECUTOR_CALIBRATION_RUNNER_HPP

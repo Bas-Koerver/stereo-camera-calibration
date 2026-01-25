@@ -8,7 +8,7 @@ namespace YACCP::Executor {
     void runCalibration(CLI::CliCmdConfig& cliCmdConfig,
                         CLI::CliCmds& cliCmds,
                         std::filesystem::path path,
-                        const std::stringstream& dateTime) {
+                        const std::string& dateTime) {
         const std::filesystem::path dataPath{path / "data"};
         std::filesystem::path jobPath = dataPath / cliCmdConfig.calibrationCmdConfig.jobId;
 

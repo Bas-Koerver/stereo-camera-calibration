@@ -17,14 +17,18 @@ namespace YACCP::Utility {
         // "[1;1H" Moves cursor to the top-left corner
 
         void enable() {
-            if (altBufferEnabled_) return;
+            if (altBufferEnabled_) {
+                return;
+            }
             altBufferEnabled_ = true;
             std::cout << "\x1b[?1049h\x1b[2J\x1b[1;1H" << std::flush;
         }
 
 
         void disable() {
-            if (!altBufferEnabled_) return;
+            if (!altBufferEnabled_) {
+                return;
+            }
             altBufferEnabled_ = false;
             std::cout << "\x1b[?1049l" << std::flush;
         }
@@ -73,7 +77,7 @@ namespace YACCP::Utility {
                                            const cv::Mat& gray,
                                            int cornerMin);
 
-    [[nodiscard]] std::_Timeobj<char, const tm*> getCurrentDateTime();
+    [[nodiscard]] std::string getCurrentDateTime();
 
     [[nodiscard]] bool isNonEmptyDirectory(const std::filesystem::path& path);
 

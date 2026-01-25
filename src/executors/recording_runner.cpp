@@ -24,7 +24,7 @@ namespace YACCP::Executor {
 
     int runRecording(CLI::CliCmdConfig& cliCmdConfig,
                      const std::filesystem::path& path,
-                     const std::stringstream& dateTime) {
+                     const std::string& dateTime) {
         const std::filesystem::path dataPath{path / "data"};
 
         if (cliCmdConfig.recordingCmdConfig.showAvailableCams) {
@@ -59,7 +59,7 @@ namespace YACCP::Executor {
                     Config::FileConfig tomlConfig;
                     std::cout <<
                         "The most recent job ID already has recoding data, creating a new job and copying job config from previous one. \n";
-                    jobPath = dataPath / ("job_" + dateTime.str());
+                    jobPath = dataPath / ("job_" + dateTime);
                     (void)std::filesystem::create_directories(jobPath);
                     std::filesystem::copy(jobPathMostRecent / GlobalVariables::jobDataFileName,
                                           jobPath / GlobalVariables::jobDataFileName);

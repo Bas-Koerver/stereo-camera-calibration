@@ -142,8 +142,8 @@ namespace YACCP {
 
     std::vector<cv::Point> VideoViewer::correctCoordinates(const ValidatedCornersData& validatedCornersData) {
         cv::Point2f offset{
-            static_cast<float>(camDatas_[validatedCornersData.camId].info.ViewData.windowX),
-            static_cast<float>(camDatas_[validatedCornersData.camId].info.ViewData.windowY)
+            static_cast<float>(camDatas_[validatedCornersData.camId].info.viewData.windowX),
+            static_cast<float>(camDatas_[validatedCornersData.camId].info.viewData.windowY)
         };
         std::vector<cv::Point> correctedCorners;
 
@@ -181,8 +181,8 @@ namespace YACCP {
             int x = sumVector(maxWidthVec, column) + paddingX + extraSpacingX;
             int y = sumVector(maxHeightVec, row) + paddingY + extraSpacingY;
 
-            camDatas_[i].info.ViewData.windowX = x;
-            camDatas_[i].info.ViewData.windowY = y;
+            camDatas_[i].info.viewData.windowX = x;
+            camDatas_[i].info.viewData.windowY = y;
 
             camRefs.emplace_back(frameComposer_.add_new_subimage_parameters(
                     x,
